@@ -401,6 +401,94 @@ class Trap( BaseProblemFunction ):
 
     def generateVector( numBit ):
     
+        return [0.5] * numBit
+
+    def updateVector( vectorBlockList, winner, loser, populationSize, maxNumBitInBlock ):
+
+        for index, vectorBlock in enumerate( vectorBlockList ):
+        
+            winObjIndex = winner.indexList[index]        
+            winObj = vectorBlock[winObjIndex]
+
+            loseObjIndex = loser.indexList[index]
+            loseObj = vectorBlock[loseObjIndex]
+
+            startIndex = min( winObjIndex, loseObjIndex )
+            endIndex = max( winObjIndex, loseObjIndex )
+            
+            sumProb = vectorBlock[startIndex].prob - vectorBlock[startIndex].weight
+            
+            transferVector = 1.0 / float(populationSize)
+            
+            if loseObj.weight < transferVector:            
+                transferVector = loseObj.weight
+           
+            winObj.weight += transferVector
+            loseObj.weight -= transferVector  
+            
+            for i in range( startIndex, endIndex + 1 ):
+                sumProb += vectorBlock[i].weight
+                vectorBlock[i].prob = sumProb
+
+########################################
+#   TSP ( traversal salesman problem )
+#      
+
+class TSP( BaseProblemFunction ):
+
+    #   Input mapping score
+    ScoreList = [1] * 16
+
+    @increaseEvaluateFunctionCountDecorator
+    def computeFitness( bitStr ):
+        ''' %bitStr% is '10100111010'
+            return value compute from trap problem
+        '''
+        fitness = 0
+        fitnessLow = len( bitStr ) - 1
+        
+        for index, bit in enumerate( bitStr ):
+
+            if bit == '0':
+                continue
+            try:
+                fitness += TSP.ScoreList[index]
+            except IndexError:
+                fitness += 1
+
+        return fitness
+
+    def generateCandidate( vectorTupleList, maxNumBitInBlock, indexToPropCacheDictList ):
+
+        fullBitResultValue1 = ''
+        fullBitResultValue2 = ''
+        indexList1 = []
+        indexList2 = []
+        for vectorIndex, vectorTuple in enumerate( vectorTupleList ):
+
+            randomCandidate1 = random ()
+            randomCandidate2 = random ()   
+                 
+            #ynxlog( 5, '    randomCandidate1 = {}'.format( randomCandidate1 ) )
+            #ynxlog( 5, '    randomCandidate2 = {}'.format( randomCandidate2 ) )
+
+            candidateIndex1 = binarySearch( vectorTuple, randomCandidate1 )
+                
+            candidateObject1 = vectorTuple[candidateIndex1]        
+            fullBitResultValue1 += candidateObject1.val
+            indexList1.append( candidateIndex1 )
+
+            candidateIndex2 = binarySearch( vectorTuple, randomCandidate2 )
+            
+            candidateObject2 = vectorTuple[candidateIndex2]        
+            fullBitResultValue2 += candidateObject2.val
+            indexList2.append( candidateIndex2 )
+
+        return SolutionForTrap(fullBitResultValue1, maxNumBitInBlock, indexList1), SolutionForTrap(fullBitResultValue2, maxNumBitInBlock, indexList2)
+
+    def generateVector( numBit ):
+        
+
         maxValue = int( pow( 2, numBit ) )
         DefaultProbValue = 1.0 / float (maxValue)
         valueObjectList = []
@@ -440,5 +528,6 @@ class Trap( BaseProblemFunction ):
             
             for i in range( startIndex, endIndex + 1 ):
                 sumProb += vectorBlock[i].weight
+
                 vectorBlock[i].prob = sumProb
-            
+      

@@ -48,7 +48,7 @@ if __name__ == '__main__':
     numGene = 1
     
     #   Call write candidate to shelve
-    writeCandidateShelve( maxNumBitInBlock, ProblemFunction.Hiff )
+    writeCandidateShelve( maxNumBitInBlock, ProblemFunction.TSP )
     
     #   List for collect fucntion evaluation count
     #       ( list of integer )
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         argumentDict = { 'generations' : generations,
                          'size' : numBit,
                          'populationSize' : populationSize,
-                         'problemFunctionClass' : ProblemFunction.Hiff,
+                         'problemFunctionClass' : ProblemFunction.TSP,
                          'numGene' : numGene,
                          'maxNumBitInBlock' : maxNumBitInBlock,
                          'sample' : sample }
