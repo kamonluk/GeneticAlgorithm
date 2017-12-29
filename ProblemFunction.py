@@ -467,7 +467,7 @@ class Route():
         self.prob = prob
     
     def __repr__( self ):
-        return ' route ( {}{} ) '.format( self.leftTownName, self.rightTownName )
+        return ' route ( {}{}, prob = {:.4f} ) '.format( self.leftTownName, self.rightTownName, self.prob )
 
 class TSP( BaseProblemFunction ):
 
@@ -502,7 +502,7 @@ class TSP( BaseProblemFunction ):
         countProb = 0
         for route in routeList:
             countProb += route.prob / sumProb 
-            ynxlog( 0, ' randomValue = {}, countProb = {}'.format( randomValue, countProb) )
+            ynxlog( 1, ' randomValue = {}, countProb = {}'.format( randomValue, countProb) )
             if( randomValue < countProb ):                    
                 return route
         raise KeyError( ' do not have candidate. WHY !!!!' )
@@ -512,18 +512,21 @@ class TSP( BaseProblemFunction ):
         ''' 
         '''
         selectedRouteList = []
+        inAndOutCityMappingDict = {}
         for chooseRoute, routeList in vectorTupleList[:-1]:
             
             blockRouteList = []   
             randomRoute = TSP.getRandomRouteList( routeList )
+            #randomRoute = vectorTupleList[-1][1][0]
             blockRouteList.append( randomRoute )
 
             #   Initialize for find next route
-            currentCity = randomRoute.rightTownName
+            firstCity = randomRoute.leftTownName
+            lastCity = randomRoute.rightTownName
+            currentCity = lastCity
             passedCitySet = set( [randomRoute.leftTownName] )
-            cityList = []
             
-            ynxlog( 0, ' chooseRoute = {}, currentCity = {}'.format( chooseRoute, currentCity) )
+            ynxlog( 1, ' chooseRoute = {}, currentCity = {}'.format( chooseRoute, currentCity) )
 
             #   Loop to choose next route
             while( len( blockRouteList ) < chooseRoute ):
@@ -533,8 +536,8 @@ class TSP( BaseProblemFunction ):
                 for route in routeList:
                     routeCitySet = set( [route.rightTownName, route.leftTownName] )
 
-                    ynxlog( 0, 'routeCitySet = {}, passedCitySet = {}, currentCity in routeCitySet = {}'.format( routeCitySet, passedCitySet, currentCity in routeCitySet ) )
-                    ynxlog( 0, 'routeCitySet.difference( passedCitySet ) = {}'.format( routeCitySet.difference( passedCitySet ) ) ) 
+                    ynxlog( 1, 'routeCitySet = {}, passedCitySet = {}, currentCity in routeCitySet = {}'.format( routeCitySet, passedCitySet, currentCity in routeCitySet ) )
+                    ynxlog( 1, 'routeCitySet.difference( passedCitySet ) = {}'.format( routeCitySet.difference( passedCitySet ) ) ) 
 
                     #   Check route was connect with current city
                     #       and not connect to passed city
@@ -545,7 +548,7 @@ class TSP( BaseProblemFunction ):
                         validRouteList.append( route )
                         break
                     
-                ynxlog( 0, 'validRoute = {} '.format( validRouteList ) )
+                ynxlog( 1, 'validRoute = {} '.format( validRouteList ) )
 
                 #   Generate next route
                 randomNextRoute = TSP.getRandomRouteList( validRouteList )
@@ -555,13 +558,82 @@ class TSP( BaseProblemFunction ):
                 passedCitySet.add( randomNextRoute )
                 if( randomNextRoute.leftTownName == currentCity ):
                     currentCity = randomNextRoute.rightTownName
+                    
                 else:
                     currentCity = randomNextRoute.leftTownName
-                
+
+                lastCity = currentCity
+
             selectedRouteList.extend( blockRouteList )
+            inAndOutCityMappingDict[firstCity] = lastCity
+            inAndOutCityMappingDict[lastCity] = firstCity
+        
+        ynxlog( 1, ' inAndOutCityMappingDict = {} '.format( inAndOutCityMappingDict ) )
 
         #   Compute last block for route between block
+        routeCount, routeBetweenBlockList = vectorTupleList[-1]
+        
+        ynxlog( 1, ' routeBetweenBlockList = {} '.format( routeBetweenBlockList ) )
+        
+        validRouteBetweenBlockList = []
+        validCitySet = set(inAndOutCityMappingDict.keys())
+        for route in routeBetweenBlockList:
+            if( route.rightTownName not in validCitySet 
+                or route.leftTownName not in validCitySet ):
+                continue
+            validRouteBetweenBlockList.append( route )
+                   
+        randomRoute = TSP.getRandomRouteList( validRouteBetweenBlockList )
+        blockRouteList = [randomRoute]
 
+        ynxlog( 1, ' randomRoute = {} {} '.format( randomRoute.leftTownName, randomRoute.rightTownName ) )
+
+        #   Initialize for find next route
+        firstCity = inAndOutCityMappingDict[ randomRoute.leftTownName ]
+        lastCity = inAndOutCityMappingDict[ randomRoute.rightTownName ]
+        currentCity = lastCity
+        passedCitySet = set( [ firstCity, randomRoute.leftTownName, randomRoute.rightTownName ] )
+
+        while( len( blockRouteList ) < routeCount - 2 ):
+
+            validRouteList = []
+
+            for route in validRouteBetweenBlockList:
+                routeCitySet = set( [route.rightTownName, route.leftTownName] )
+
+                ynxlog( 1, 'routeCitySet = {}, passedCitySet = {}, currentCity in routeCitySet = {}'.format( routeCitySet, passedCitySet, currentCity in routeCitySet ) )
+                ynxlog( 1, 'routeCitySet.difference( passedCitySet ) = {}'.format( routeCitySet.difference( passedCitySet ) ) ) 
+
+                #   Check route was connect with current city
+                #       and not connect to passed city
+                if( currentCity in routeCitySet
+                    and routeCitySet.difference( passedCitySet ) == routeCitySet ):
+
+                    #   Collect all valid route
+                    validRouteList.append( route )
+                    break
+
+            #   Generate next route
+            randomNextRoute = TSP.getRandomRouteList( validRouteList )
+            blockRouteList.append( randomNextRoute )
+
+            #   Update passed city and current city
+            passedCitySet.add( randomNextRoute.rightTownName )
+            passedCitySet.add( randomNextRoute.leftTownName )
+
+            if( randomNextRoute.leftTownName == currentCity ):
+                currentCity = inAndOutCityMappingDict[ randomNextRoute.rightTownName ]
+                    
+            else:
+                currentCity = inAndOutCityMappingDict[ randomNextRoute.leftTownName ]
+
+            lastCity = currentCity
+        
+        for route in routeBetweenBlockList:
+             routeCitySet = set( [route.rightTownName, route.leftTownName] )
+             if( routeCitySet == set( [firstCity, lastCity] ) ):
+                 blockRouteList.append( route )
+        selectedRouteList.extend( blockRouteList )
 
         return selectedRouteList
 
@@ -570,8 +642,8 @@ class TSP( BaseProblemFunction ):
         routeProbVectorList = vectorTupleList[0]
         firstRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
         secondRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
-        ynxlog( 0, 'firstRouteList = {}'.format( firstRouteList ) )
-        ynxlog( 0, 'secondRouteList = {}'.format( secondRouteList ) )
+        ynxlog( 1, 'firstRouteList = {}'.format( firstRouteList ) )
+        ynxlog( 1, 'secondRouteList = {}'.format( secondRouteList ) )
         return SolutionForTSP(firstRouteList), SolutionForTSP(secondRouteList)
 
     def generateVector( numBit ):
@@ -599,6 +671,22 @@ class TSP( BaseProblemFunction ):
                              Route( index=13, leftTownName='3', rightTownName='5', prob=baseProb, distance=3 ),
                              Route( index=14, leftTownName='3', rightTownName='6', prob=baseProb, distance=3 ) ] ) ]
 
+        #vectorList = [ ( 5, [ Route( index=0, leftTownName='1', rightTownName='2', prob=baseProb, distance=2 ),                             
+        #                     Route( index=2, leftTownName='2', rightTownName='3', prob=baseProb, distance=3 ),
+        #                     Route( index=3, leftTownName='4', rightTownName='5', prob=baseProb, distance=3 ),
+        #                     Route( index=4, leftTownName='4', rightTownName='6', prob=baseProb, distance=2 ),
+        #                     Route( index=5, leftTownName='5', rightTownName='6', prob=baseProb, distance=1 ),
+        #                     Route( index=6, leftTownName='1', rightTownName='4', prob=baseProb, distance=3 ),
+        #                     Route( index=7, leftTownName='1', rightTownName='5', prob=baseProb, distance=3 ),
+        #                     Route( index=8, leftTownName='1', rightTownName='6', prob=baseProb, distance=4 ),
+        #                     Route( index=9, leftTownName='2', rightTownName='4', prob=baseProb, distance=4 ),
+        #                     Route( index=10, leftTownName='2', rightTownName='5', prob=baseProb, distance=4 ),
+        #                     Route( index=11, leftTownName='2', rightTownName='6', prob=baseProb, distance=4 ),
+        #                     Route( index=12, leftTownName='3', rightTownName='4', prob=baseProb, distance=3 ),
+        #                     Route( index=13, leftTownName='3', rightTownName='5', prob=baseProb, distance=3 ),
+        #                     Route( index=14, leftTownName='3', rightTownName='6', prob=baseProb, distance=3 ) ] ),
+        #              ( 1, [ Route( index=1, leftTownName='1', rightTownName='3', prob=baseProb, distance=1 ) ] ) ]
+
         return vectorList
 
     def updateVector( vectorBlockList, winner, loser, populationSize, maxNumBitInBlock ):
@@ -611,9 +699,11 @@ class TSP( BaseProblemFunction ):
         winnerRouteIndexList =  [ route.index for route in winnerRouteList ]
         loserRouteIndexList =  [ route.index for route in loserRouteList ]
 
-        ynxlog( 0, ' winner route index = {} '.format( winnerRouteIndexList ) )
-        ynxlog( 0, ' loser route index = {} '.format( loserRouteIndexList ) )
+        ynxlog( 1, ' winner route index = {} '.format( winnerRouteIndexList ) )
+        ynxlog( 1, ' loser route index = {} '.format( loserRouteIndexList ) )
 
+        
+            
         #   Loop to update prob in route
         for index in range( len( winnerRouteList ) ):
 
@@ -630,4 +720,10 @@ class TSP( BaseProblemFunction ):
             #   Update probility
             winnerRoute.prob += transferProb
             loserRoute.prob -= transferProb
+        
+        allRouteList = []
+        for count, routeList in  vectorBlockList[0]:
+            allRouteList.extend( routeList )
+        ynxlog( 0, ' allRouteList = {}'.format( allRouteList ) )
+        ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
 

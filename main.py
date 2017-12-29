@@ -43,7 +43,7 @@ if __name__ == '__main__':
     numBit = 8
     maxNumBitInBlock = 8
     numSample = 1
-    populationSize = 100
+    populationSize = 10
     generations = 1000000
     numGene = 1
     

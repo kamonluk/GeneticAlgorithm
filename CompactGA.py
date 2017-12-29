@@ -198,6 +198,7 @@ def run( generations, size, populationSize,
 #warning Change to use this for loop until given generation number
     #for generationIndex in range(generations):    
     while ( True ):
+    #for generationIndex in range(1):   
         
         startAllTime = time.time()
 
@@ -208,9 +209,8 @@ def run( generations, size, populationSize,
         startGenCanTime = startAllTime
 
         firstCandidate, secondCandidate = problemFunctionClass.generateCandidate(vectorBlock, maxNumBitInBlock, indexToPropCacheDictList)
-        ynxlog( 0, ' first = {}, second = {}'.format( firstCandidate.value, secondCandidate.value ) ) 
-        return 
-
+        ynxlog( 1, ' first = {}, second = {}'.format( firstCandidate.value, secondCandidate.value ) ) 
+        
         endGenCanTime = time.time()
 
         #
@@ -276,7 +276,8 @@ def run( generations, size, populationSize,
 
         #   Stop if fitness is the best 
         #if( best.fitness == size ):
-        if( best.fitness == ( log2( size ) + 1 ) * size ):
+        #if( best.fitness == ( log2( size ) + 1 ) * size ):
+        if( best.fitness == 13 ):
         #if( best.fitness == ( ( log2( maxNumBitInBlock ) + 1 ) * maxNumBitInBlock ) * numBlock ):
             break
 
