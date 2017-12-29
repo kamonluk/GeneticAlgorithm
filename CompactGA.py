@@ -23,17 +23,6 @@ from Globals import getEvaluateFunctionCount, resetEvaluateFunctionCount
 useDict = False
 indexToPropCacheDict = {}
 
-#
-#   Helper function
-#
-
-def compete(a, b):
-    ''' Returns a tuple with the winner solution
-    '''
-    if a.fitness > b.fitness:
-        return a, b
-    else:
-        return b, a
 
 #
 #   Function bodies
@@ -219,6 +208,8 @@ def run( generations, size, populationSize,
         startGenCanTime = startAllTime
 
         firstCandidate, secondCandidate = problemFunctionClass.generateCandidate(vectorBlock, maxNumBitInBlock, indexToPropCacheDictList)
+        ynxlog( 0, ' first = {}, second = {}'.format( firstCandidate.value, secondCandidate.value ) ) 
+        return 
 
         endGenCanTime = time.time()
 
@@ -241,7 +232,7 @@ def run( generations, size, populationSize,
         startCompeteTime = time.time()
         
         #   let them compete, so we can know who is the best of the pair
-        winner, loser = compete( firstCandidate, secondCandidate )
+        winner, loser = problemFunctionClass.compete( firstCandidate, secondCandidate )
     
         endCompeteTime = time.time()
         

@@ -122,6 +122,15 @@ class BaseProblemFunction( object ):
     def updateVector( vectorBlock, winnerValue, loserValue, populationSize, maxNumBitInBlock ):
         raise NotImplemented( ' not implemented yet ' )
 
+    @staticmethod
+    def compete( firstCandidate, secondCandidate):
+        ''' Returns a tuple with the winner solution
+        '''
+        if firstCandidate.fitness > secondCandidate.fitness:
+            return firstCandidate, secondCandidate
+        else:
+            return secondCandidate, firstCandidate
+
 ########################################
 #   SumOfBits
 #
@@ -434,100 +443,191 @@ class Trap( BaseProblemFunction ):
 #   TSP ( traversal salesman problem )
 #      
 
+class SolutionForTSP( object ):
+    ''' A solution for the given problem, it is composed of a binary value and its fitness value
+    '''
+    
+    def __init__(self, value):
+
+        # note value is list of Route object
+        self.value = value
+        self.fitness = None
+        
+    def calculateFitness(self, fitnessFunction):
+        self.fitness = fitnessFunction(self.value)
+
+class Route():
+
+    def __init__( self, index, leftTownName, rightTownName, prob, distance ):
+
+        self.index = index
+        self.leftTownName = leftTownName
+        self.rightTownName = rightTownName
+        self.distance = distance
+        self.prob = prob
+    
+    def __repr__( self ):
+        return ' route ( {}{} ) '.format( self.leftTownName, self.rightTownName )
+
 class TSP( BaseProblemFunction ):
 
     #   Input mapping score
     ScoreList = [1] * 16
 
     @increaseEvaluateFunctionCountDecorator
-    def computeFitness( bitStr ):
-        ''' %bitStr% is '10100111010'
+    def computeFitness( routeList ):
+        ''' %routeList% is list of route
             return value compute from trap problem
         '''
         fitness = 0
-        fitnessLow = len( bitStr ) - 1
-        
-        for index, bit in enumerate( bitStr ):
-
-            if bit == '0':
-                continue
-            try:
-                fitness += TSP.ScoreList[index]
-            except IndexError:
-                fitness += 1
-
+        for route in routeList:
+            fitness += route.distance
         return fitness
 
-    def generateCandidate( vectorTupleList, maxNumBitInBlock, indexToPropCacheDictList ):
+    def compete( firstCandidate, secondCandidate):
+        ''' Returns a tuple with the winner solution
+        '''
+        if firstCandidate.fitness < secondCandidate.fitness:
+            return firstCandidate, secondCandidate
+        else:
+            return secondCandidate, firstCandidate
+    
+    @staticmethod
+    def getRandomRouteList( routeList ):
+        #   find start route
+        sumProb = sum( [route.prob for route in routeList] )
+        randomValue = random()
 
-        fullBitResultValue1 = ''
-        fullBitResultValue2 = ''
-        indexList1 = []
-        indexList2 = []
-        for vectorIndex, vectorTuple in enumerate( vectorTupleList ):
+        
+        countProb = 0
+        for route in routeList:
+            countProb += route.prob / sumProb 
+            ynxlog( 0, ' randomValue = {}, countProb = {}'.format( randomValue, countProb) )
+            if( randomValue < countProb ):                    
+                return route
+        raise KeyError( ' do not have candidate. WHY !!!!' )
 
-            randomCandidate1 = random ()
-            randomCandidate2 = random ()   
-                 
-            #ynxlog( 5, '    randomCandidate1 = {}'.format( randomCandidate1 ) )
-            #ynxlog( 5, '    randomCandidate2 = {}'.format( randomCandidate2 ) )
-
-            candidateIndex1 = binarySearch( vectorTuple, randomCandidate1 )
-                
-            candidateObject1 = vectorTuple[candidateIndex1]        
-            fullBitResultValue1 += candidateObject1.val
-            indexList1.append( candidateIndex1 )
-
-            candidateIndex2 = binarySearch( vectorTuple, randomCandidate2 )
+    @staticmethod
+    def getRouteListFromVectorList( vectorTupleList ):
+        ''' 
+        '''
+        selectedRouteList = []
+        for chooseRoute, routeList in vectorTupleList[:-1]:
             
-            candidateObject2 = vectorTuple[candidateIndex2]        
-            fullBitResultValue2 += candidateObject2.val
-            indexList2.append( candidateIndex2 )
+            blockRouteList = []   
+            randomRoute = TSP.getRandomRouteList( routeList )
+            blockRouteList.append( randomRoute )
 
-        return SolutionForTrap(fullBitResultValue1, maxNumBitInBlock, indexList1), SolutionForTrap(fullBitResultValue2, maxNumBitInBlock, indexList2)
+            #   Initialize for find next route
+            currentCity = randomRoute.rightTownName
+            passedCitySet = set( [randomRoute.leftTownName] )
+            cityList = []
+            
+            ynxlog( 0, ' chooseRoute = {}, currentCity = {}'.format( chooseRoute, currentCity) )
+
+            #   Loop to choose next route
+            while( len( blockRouteList ) < chooseRoute ):
+                
+                validRouteList = []
+
+                for route in routeList:
+                    routeCitySet = set( [route.rightTownName, route.leftTownName] )
+
+                    ynxlog( 0, 'routeCitySet = {}, passedCitySet = {}, currentCity in routeCitySet = {}'.format( routeCitySet, passedCitySet, currentCity in routeCitySet ) )
+                    ynxlog( 0, 'routeCitySet.difference( passedCitySet ) = {}'.format( routeCitySet.difference( passedCitySet ) ) ) 
+
+                    #   Check route was connect with current city
+                    #       and not connect to passed city
+                    if( currentCity in routeCitySet
+                        and routeCitySet.difference( passedCitySet ) == routeCitySet ):
+
+                        #   Collect all valid route
+                        validRouteList.append( route )
+                        break
+                    
+                ynxlog( 0, 'validRoute = {} '.format( validRouteList ) )
+
+                #   Generate next route
+                randomNextRoute = TSP.getRandomRouteList( validRouteList )
+                blockRouteList.append( randomNextRoute )
+
+                #   Update passed city and current city
+                passedCitySet.add( randomNextRoute )
+                if( randomNextRoute.leftTownName == currentCity ):
+                    currentCity = randomNextRoute.rightTownName
+                else:
+                    currentCity = randomNextRoute.leftTownName
+                
+            selectedRouteList.extend( blockRouteList )
+
+        #   Compute last block for route between block
+
+
+        return selectedRouteList
+
+
+    def generateCandidate( vectorTupleList, maxNumBitInBlock, indexToPropCacheDictList ):
+        routeProbVectorList = vectorTupleList[0]
+        firstRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+        secondRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+        ynxlog( 0, 'firstRouteList = {}'.format( firstRouteList ) )
+        ynxlog( 0, 'secondRouteList = {}'.format( secondRouteList ) )
+        return SolutionForTSP(firstRouteList), SolutionForTSP(secondRouteList)
 
     def generateVector( numBit ):
-        
+        ''' Create list of block [ ( routeCount, [ routeObject, routeObject,... ]),
+                                   ( routeCount, [ routeObject, routeObject,... ]), ... ]
+        '''
+        numCity = 6
+        numBlock = 2
+        numCityInBlock = numCity / numBlock
+        numRoute = ( numCity - 1 ) / 2 * ( numCity )
+        baseProb = 1 / numRoute
+        vectorList = [ ( 2, [ Route( index=0, leftTownName='1', rightTownName='2', prob=baseProb, distance=2 ),
+                             Route( index=1, leftTownName='1', rightTownName='3', prob=baseProb, distance=1 ),
+                             Route( index=2, leftTownName='2', rightTownName='3', prob=baseProb, distance=3 ) ] ),
+                      ( 2, [ Route( index=3, leftTownName='4', rightTownName='5', prob=baseProb, distance=3 ),
+                             Route( index=4, leftTownName='4', rightTownName='6', prob=baseProb, distance=2 ),
+                             Route( index=5, leftTownName='5', rightTownName='6', prob=baseProb, distance=1 ) ] ),
+                      ( 2, [ Route( index=6, leftTownName='1', rightTownName='4', prob=baseProb, distance=3 ),
+                             Route( index=7, leftTownName='1', rightTownName='5', prob=baseProb, distance=3 ),
+                             Route( index=8, leftTownName='1', rightTownName='6', prob=baseProb, distance=4 ),
+                             Route( index=9, leftTownName='2', rightTownName='4', prob=baseProb, distance=4 ),
+                             Route( index=10, leftTownName='2', rightTownName='5', prob=baseProb, distance=4 ),
+                             Route( index=11, leftTownName='2', rightTownName='6', prob=baseProb, distance=4 ),
+                             Route( index=12, leftTownName='3', rightTownName='4', prob=baseProb, distance=3 ),
+                             Route( index=13, leftTownName='3', rightTownName='5', prob=baseProb, distance=3 ),
+                             Route( index=14, leftTownName='3', rightTownName='6', prob=baseProb, distance=3 ) ] ) ]
 
-        maxValue = int( pow( 2, numBit ) )
-        DefaultProbValue = 1.0 / float (maxValue)
-        valueObjectList = []
-        blockValueToProbValueDict = dict()
-
-        for value in range( maxValue ):        
-            string = '{1:0{0:}b}'.format( numBit, value )
-            
-            valueObjectList.append( Obj( string, DefaultProbValue, ( value + 1 )/float( maxValue ) ) )
-        
-        ynxlog( 5, 'valueObjectList = {}'.format( valueObjectList ) )
-
-        return tuple( valueObjectList )
+        return vectorList
 
     def updateVector( vectorBlockList, winner, loser, populationSize, maxNumBitInBlock ):
+        ''' Get all winner, loser routeList by find difference index between winner solution and loser solution                
+        '''
+        assert( len( winner.value ) == len( loser.value ) ), ' route are not equal :: winner( {} ) != loser( {} )'.format( len( winner.value ), len( loser.value ) )
+        winnerRouteList = winner.value
+        loserRouteList = loser.value
 
-        for index, vectorBlock in enumerate( vectorBlockList ):
-        
-            winObjIndex = winner.indexList[index]        
-            winObj = vectorBlock[winObjIndex]
+        winnerRouteIndexList =  [ route.index for route in winnerRouteList ]
+        loserRouteIndexList =  [ route.index for route in loserRouteList ]
 
-            loseObjIndex = loser.indexList[index]
-            loseObj = vectorBlock[loseObjIndex]
+        ynxlog( 0, ' winner route index = {} '.format( winnerRouteIndexList ) )
+        ynxlog( 0, ' loser route index = {} '.format( loserRouteIndexList ) )
 
-            startIndex = min( winObjIndex, loseObjIndex )
-            endIndex = max( winObjIndex, loseObjIndex )
-            
-            sumProb = vectorBlock[startIndex].prob - vectorBlock[startIndex].weight
-            
-            transferVector = 1.0 / float(populationSize)
-            
-            if loseObj.weight < transferVector:            
-                transferVector = loseObj.weight
-           
-            winObj.weight += transferVector
-            loseObj.weight -= transferVector  
-            
-            for i in range( startIndex, endIndex + 1 ):
-                sumProb += vectorBlock[i].weight
+        #   Loop to update prob in route
+        for index in range( len( winnerRouteList ) ):
 
-                vectorBlock[i].prob = sumProb
-      
+            winnerRoute = winnerRouteList[index]
+            loserRoute = loserRouteList[index]
+
+            #   Compute transfer prob
+            transferProb = 1.0 / float(populationSize)
+
+            #   clamp to minimum prob
+            if( transferProb > loserRoute.prob ):
+                transferProb = loserRoute.prob
+            
+            #   Update probility
+            winnerRoute.prob += transferProb
+            loserRoute.prob -= transferProb
+

@@ -41,8 +41,8 @@ if __name__ == '__main__':
 
     #   Initialize value
     numBit = 8
-    maxNumBitInBlock = 4
-    numSample = 50
+    maxNumBitInBlock = 8
+    numSample = 1
     populationSize = 100
     generations = 1000000
     numGene = 1
@@ -68,5 +68,5 @@ if __name__ == '__main__':
         fucntionEvaluationCount = CompactGA.run( **argumentDict )
         functEvalList.append( fucntionEvaluationCount )
     
-    print( ' AVERAGE = ', np.average( functEvalList ) )
+    #print( ' AVERAGE = ', np.average( functEvalList ) )
     ynxlog( 1, functEvalList )
