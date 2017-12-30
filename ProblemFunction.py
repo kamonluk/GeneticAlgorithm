@@ -467,7 +467,7 @@ class Route():
         self.prob = prob
     
     def __repr__( self ):
-        return ' route ( {}{}, prob = {:.4f} ) '.format( self.leftTownName, self.rightTownName, self.prob )
+        return ''# route ( {}{}, prob = {:.4f} ) '.format( self.leftTownName, self.rightTownName, self.prob )
 
 class TSP( BaseProblemFunction ):
 
@@ -515,8 +515,14 @@ class TSP( BaseProblemFunction ):
         inAndOutCityMappingDict = {}
         for chooseRoute, routeList in vectorTupleList[:-1]:
             
-            blockRouteList = []   
-            randomRoute = TSP.getRandomRouteList( routeList )
+            blockRouteList = []
+            routeWithoutZeroProbList = []
+            for route in routeList:
+                if( route.prob == 0 ):
+                    continue
+                routeWithoutZeroProbList.append( route )
+            
+            randomRoute = TSP.getRandomRouteList( routeWithoutZeroProbList )
             #randomRoute = vectorTupleList[-1][1][0]
             blockRouteList.append( randomRoute )
 
@@ -534,6 +540,10 @@ class TSP( BaseProblemFunction ):
                 validRouteList = []
 
                 for route in routeList:
+
+                    if( route.prob == 0 ):
+                        continue
+                    
                     routeCitySet = set( [route.rightTownName, route.leftTownName] )
 
                     ynxlog( 1, 'routeCitySet = {}, passedCitySet = {}, currentCity in routeCitySet = {}'.format( routeCitySet, passedCitySet, currentCity in routeCitySet ) )
@@ -578,6 +588,10 @@ class TSP( BaseProblemFunction ):
         validRouteBetweenBlockList = []
         validCitySet = set(inAndOutCityMappingDict.keys())
         for route in routeBetweenBlockList:
+
+            if( route.prob == 0 ):
+                continue
+                    
             if( route.rightTownName not in validCitySet 
                 or route.leftTownName not in validCitySet ):
                 continue
@@ -724,6 +738,6 @@ class TSP( BaseProblemFunction ):
         allRouteList = []
         for count, routeList in  vectorBlockList[0]:
             allRouteList.extend( routeList )
-        ynxlog( 0, ' allRouteList = {}'.format( allRouteList ) )
-        ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
+        #ynxlog( 0, ' allRouteList = {}'.format( allRouteList ) )
+        #ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
 

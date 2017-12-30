@@ -198,7 +198,7 @@ def run( generations, size, populationSize,
 #warning Change to use this for loop until given generation number
     #for generationIndex in range(generations):    
     while ( True ):
-    #for generationIndex in range(1):   
+    #for generationIndex in range(5):   
         
         startAllTime = time.time()
 
