@@ -198,7 +198,7 @@ def run( generations, size, populationSize,
 #warning Change to use this for loop until given generation number
     #for generationIndex in range(generations):    
     while ( True ):
-    #for generationIndex in range(5):   
+    #for generationIndex in range(1):   
         
         startAllTime = time.time()
 
@@ -271,7 +271,7 @@ def run( generations, size, populationSize,
         ynxlog( 1, '    compete time = {}'.format( endCompeteTime - startCompeteTime ) )
         ynxlog( 1, '    update vec time = {}'.format( endUpVecTime - startUpVecTime ) )
         ynxlog( 1, '    generation time = {}'.format( endAllTime - startAllTime ) )        
-        ynxlog( 0, " sample: %d generation: %d best value: %s best fitness: %f" % ( sample + 1, generationIndex + 1, best.value, float(best.fitness)))
+        ynxlog( 0, " sample: %d generation: %d best value: %s best fitness: %f" % ( sample + 1, generationIndex + 1, best, float(best.fitness)))
         ynxlog( 0, '    avg bin time = {}'.format( sumTime / ( generationIndex + 1 ) ) )
         ynxlog( 0, ' {} '.format( '='*50 ) )
         

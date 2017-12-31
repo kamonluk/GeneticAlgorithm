@@ -460,26 +460,29 @@ class SolutionForTSP( object ):
         
         if( len( self.value ) == 0 ):
             return ' empty list '
-        routeStrList = [ self.value[0].leftTownName ]
-        remainCitySet = set(self.value[1:])
+        
+        routeStrList = []
+        remainCitySet = set(self.value[0:])
 
         currentCity = self.value[0].rightTownName
-         
-        while( len( routeStrList ) != len( self.value ) - 1 ):
-
+        
+        while( len( routeStrList ) != len( self.value ) ):
+            
             for route in remainCitySet:
+
                 if( route.leftTownName == currentCity ):
                     currentCity = route.rightTownName
                     remainCitySet = remainCitySet.difference( set([route]) )
                     routeStrList.append( currentCity )
                     break
                     
-                elif( route.leftTownName == currentCity ):
+                elif( route.rightTownName == currentCity ):
                     currentCity = route.leftTownName
                     remainCitySet = remainCitySet.difference( set([route]) )
                     routeStrList.append( currentCity )
                     break
-            print( len(routeStrList) )
+            
+        routeStrList.append( self.value[0].leftTownName )            
         return ' --> '.join( routeStrList )
         
 class Route():
@@ -788,7 +791,7 @@ class TSP( BaseProblemFunction ):
 
         allRouteSet = allRouteSet.difference( set(thirdBlockRouteList) )
                 
-        ynxlog( 0, ' length = {}'.format( len(allCityRouteList) ) )
+        ynxlog( 3, ' length = {}'.format( len(allCityRouteList) ) )
 ##        vectorList = [ ( len( cityNameList ) - 1, allCityRouteList ),
 ##                       ( 1, allCityRouteList ) ]
         vectorList = [ ( 3, firstBlockRouteList ),
@@ -796,7 +799,7 @@ class TSP( BaseProblemFunction ):
                        ( 3, thirdBlockRouteList ),
                        ( 3, list( allRouteSet ) ) ]
         
-        ynxlog( 0, ' vectorList = {}'.format( vectorList ) )
+        ynxlog( 3, ' vectorList = {}'.format( vectorList ) )
 ##        vectorList = [ ( 2, [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
 ##                             Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
 ##                             Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ) ] ),
