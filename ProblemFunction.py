@@ -482,7 +482,7 @@ class SolutionForTSP( object ):
                     routeStrList.append( currentCity )
                     break
             
-        routeStrList.append( self.value[0].leftTownName )            
+        routeStrList = [self.value[0].rightTownName] + routeStrList
         return ' --> '.join( routeStrList )
         
 class Route():
