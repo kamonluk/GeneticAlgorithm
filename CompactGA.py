@@ -186,7 +186,7 @@ def run( generations, size, populationSize,
     #   
     
     #   Open shelve to write result
-    shelveObj = shelve.open( '{}bit_{}pop_backup_sample{}.shelve'.format( size, populationSize, sample ) )
+#    shelveObj = shelve.open( '{}bit_{}pop_backup_sample{}.shelve'.format( size, populationSize, sample ) )
 
     #   Initialize variable
     sumTime = 0
@@ -233,13 +233,15 @@ def run( generations, size, populationSize,
         
         #   let them compete, so we can know who is the best of the pair
         winner, loser = problemFunctionClass.compete( firstCandidate, secondCandidate )
-    
+
         endCompeteTime = time.time()
+
+        ynxlog( 2, ' winner = {}, loser = {}'.format( winner.value, loser.value ) )
+        ynxlog( 0, ' winner fitness = {}, loser fitness = {}'.format( winner.fitness, loser.fitness ) )
         
         #   Update best candidate
         if best:
-            if winner.fitness > best.fitness:
-                    best = winner
+            best, winner = problemFunctionClass.compete( winner, best )            
         else:
             best = winner
 
@@ -271,23 +273,24 @@ def run( generations, size, populationSize,
         ynxlog( 1, '    generation time = {}'.format( endAllTime - startAllTime ) )        
         ynxlog( 0, " sample: %d generation: %d best value: %s best fitness: %f" % ( sample + 1, generationIndex + 1, best.value, float(best.fitness)))
         ynxlog( 0, '    avg bin time = {}'.format( sumTime / ( generationIndex + 1 ) ) )
+        ynxlog( 0, ' {} '.format( '='*50 ) )
         
         generationIndex += 1
 
         #   Stop if fitness is the best 
         #if( best.fitness == size ):
         #if( best.fitness == ( log2( size ) + 1 ) * size ):
-        if( best.fitness == 13 ):
+        if( best.fitness == 7293 ):
         #if( best.fitness == ( ( log2( maxNumBitInBlock ) + 1 ) * maxNumBitInBlock ) * numBlock ):
             break
 
     #   Write result to shelve
     functEvalValue = getEvaluateFunctionCount()
-    shelveObj['EvaluateFunctionCount'] = functEvalValue
-    shelveObj['generation'] = generationIndex
-    shelveObj['vectorBlock'] = vectorBlock
-    shelveObj['bestValue'] = best.value
-    shelveObj.close()
+##    shelveObj['EvaluateFunctionCount'] = functEvalValue
+##    shelveObj['generation'] = generationIndex
+##    shelveObj['vectorBlock'] = vectorBlock
+##    shelveObj['bestValue'] = best.value
+##    shelveObj.close()
 
     ynxlog( 1, 'best fitness found in gen = {} '.format( bestfitgen ) )
     ynxlog( 0, ' EvaluateFunctionCount = {}'.format( functEvalValue ) )

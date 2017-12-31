@@ -3,7 +3,7 @@
 #
 
 from random import random
-
+import time
 #
 #   Local import
 #
@@ -140,12 +140,12 @@ class SumOfBits( BaseProblemFunction ):
     @increaseEvaluateFunctionCountDecorator
     def computeFitness( bitStr ):
         ''' %bitStr% is '10100111010'
-            return sum of bit that is '1'
+            return sum of bit that is 'A'
         '''
         fitness = 0
         
         for bit in bitStr:
-            if bit == '1':
+            if bit == 'A':
                fitness += 1
        
         return fitness
@@ -245,7 +245,7 @@ def hierarchyFunc( bitStr, numBlock ):
 #   f func
 def fitnessFunc( bit ):
     
-    if( bit == '1' or bit == '0' ):
+    if( bit == 'A' or bit == '0' ):
         return 1
     else:
         return 0
@@ -367,10 +367,10 @@ class Trap( BaseProblemFunction ):
         fitnessLow = len( bitStr ) - 1
         
         for bit in bitStr:
-            if bit == '1':
+            if bit == 'A':
                 oneCount += 1
 
-        #   If all bit is '1' then fitness is max ( numbit count )       
+        #   If all bit is 'A' then fitness is max ( numbit count )       
         if oneCount == len( bitStr ):
             fitness = float( oneCount )
 
@@ -456,6 +456,32 @@ class SolutionForTSP( object ):
     def calculateFitness(self, fitnessFunction):
         self.fitness = fitnessFunction(self.value)
 
+    def __repr__( self ):
+        
+        if( len( self.value ) == 0 ):
+            return ' empty list '
+        routeStrList = [ self.value[0].leftTownName ]
+        remainCitySet = set(self.value[1:])
+
+        currentCity = self.value[0].rightTownName
+         
+        while( len( routeStrList ) != len( self.value ) - 1 ):
+
+            for route in remainCitySet:
+                if( route.leftTownName == currentCity ):
+                    currentCity = route.rightTownName
+                    remainCitySet = remainCitySet.difference( set([route]) )
+                    routeStrList.append( currentCity )
+                    break
+                    
+                elif( route.leftTownName == currentCity ):
+                    currentCity = route.leftTownName
+                    remainCitySet = remainCitySet.difference( set([route]) )
+                    routeStrList.append( currentCity )
+                    break
+            print( len(routeStrList) )
+        return ' --> '.join( routeStrList )
+        
 class Route():
 
     def __init__( self, index, leftTownName, rightTownName, prob, distance ):
@@ -467,7 +493,7 @@ class Route():
         self.prob = prob
     
     def __repr__( self ):
-        return ''# route ( {}{}, prob = {:.4f} ) '.format( self.leftTownName, self.rightTownName, self.prob )
+        return ' ( {} <--> {} ) '.format( self.leftTownName, self.rightTownName )
 
 class TSP( BaseProblemFunction ):
 
@@ -497,13 +523,13 @@ class TSP( BaseProblemFunction ):
         #   find start route
         sumProb = sum( [route.prob for route in routeList] )
         randomValue = random()
-
-        
+        ynxlog( 1, ' sumProb = {}'.format( sumProb ) )        
         countProb = 0
         for route in routeList:
             countProb += route.prob / sumProb 
             ynxlog( 1, ' randomValue = {}, countProb = {}'.format( randomValue, countProb) )
-            if( randomValue < countProb ):                    
+            if( randomValue < countProb ):
+                ynxlog( 1, ' choose route = {}<-->{}'.format( route.leftTownName, route.rightTownName ) )
                 return route
         raise KeyError( ' do not have candidate. WHY !!!!' )
 
@@ -511,6 +537,19 @@ class TSP( BaseProblemFunction ):
     def getRouteListFromVectorList( vectorTupleList ):
         ''' 
         '''
+        allRouteList = []
+        for count, routeList in vectorTupleList:
+            allRouteList.extend( routeList )
+        debugStr = ''
+        ynxlog( 1, ' ***** all route prob graph ***** ' )
+        graphRatio = 0.01
+        for allRoute in allRouteList:
+            #debugStr += ' ({}{},{:.2f})'.format( allRoute.leftTownName, allRoute.rightTownName, allRoute.prob  )            
+            ynxlog( 1, ' {}{} = {}'.format( allRoute.leftTownName, allRoute.rightTownName, '||'* int( allRoute.prob/graphRatio ) ) )
+        #ynxlog( 0, ' allRouteList = {}'.format( debugStr ) )
+        #ynxlog( 0, ' allRouteList = {}'.format( allRouteList ) )
+        #ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
+            
         selectedRouteList = []
         inAndOutCityMappingDict = {}
         for chooseRoute, routeList in vectorTupleList[:-1]:
@@ -529,10 +568,10 @@ class TSP( BaseProblemFunction ):
             #   Initialize for find next route
             firstCity = randomRoute.leftTownName
             lastCity = randomRoute.rightTownName
-            currentCity = lastCity
-            passedCitySet = set( [randomRoute.leftTownName] )
-            
-            ynxlog( 1, ' chooseRoute = {}, currentCity = {}'.format( chooseRoute, currentCity) )
+            #currentCity = lastCity
+            passedCitySet = set([])
+                
+            ynxlog( 1, ' chooseRoute = {}, firstCity = {}, lastCity = {}'.format( chooseRoute, firstCity, lastCity) )
 
             #   Loop to choose next route
             while( len( blockRouteList ) < chooseRoute ):
@@ -541,22 +580,26 @@ class TSP( BaseProblemFunction ):
 
                 for route in routeList:
 
+                    #   Skip route that prob is zero
                     if( route.prob == 0 ):
                         continue
                     
                     routeCitySet = set( [route.rightTownName, route.leftTownName] )
 
-                    ynxlog( 1, 'routeCitySet = {}, passedCitySet = {}, currentCity in routeCitySet = {}'.format( routeCitySet, passedCitySet, currentCity in routeCitySet ) )
+                    ynxlog( 1, 'routeCitySet = {}, passedCitySet = {}'.format( routeCitySet, passedCitySet ) )
                     ynxlog( 1, 'routeCitySet.difference( passedCitySet ) = {}'.format( routeCitySet.difference( passedCitySet ) ) ) 
 
+                    #   Skip close loop route
+                    if( firstCity in routeCitySet and lastCity in routeCitySet ):
+                        continue
+                        
                     #   Check route was connect with current city
                     #       and not connect to passed city
-                    if( currentCity in routeCitySet
+                    if( ( firstCity in routeCitySet or lastCity in routeCitySet )
                         and routeCitySet.difference( passedCitySet ) == routeCitySet ):
 
                         #   Collect all valid route
-                        validRouteList.append( route )
-                        break
+                        validRouteList.append( route )                        
                     
                 ynxlog( 1, 'validRoute = {} '.format( validRouteList ) )
 
@@ -564,15 +607,26 @@ class TSP( BaseProblemFunction ):
                 randomNextRoute = TSP.getRandomRouteList( validRouteList )
                 blockRouteList.append( randomNextRoute )
 
-                #   Update passed city and current city
-                passedCitySet.add( randomNextRoute )
-                if( randomNextRoute.leftTownName == currentCity ):
-                    currentCity = randomNextRoute.rightTownName
+                
+                #   Change next city and update passed city and current city
+                if( randomNextRoute.leftTownName == firstCity ):
+                    firstCity = randomNextRoute.rightTownName
+                    passedCitySet.add( randomNextRoute.leftTownName )
+                                    
+                elif( randomNextRoute.rightTownName == firstCity ):
+                    firstCity = randomNextRoute.leftTownName
+                    passedCitySet.add( randomNextRoute.rightTownName )
+                    
+                elif( randomNextRoute.leftTownName == lastCity ):
+                    lastCity = randomNextRoute.rightTownName
+                    passedCitySet.add( randomNextRoute.leftTownName )
+                    
+                elif( randomNextRoute.rightTownName == lastCity ):
+                    lastCity = randomNextRoute.leftTownName
+                    passedCitySet.add( randomNextRoute.rightTownName )
                     
                 else:
-                    currentCity = randomNextRoute.leftTownName
-
-                lastCity = currentCity
+                    assert( False ), 'Impossible !!!'
 
             selectedRouteList.extend( blockRouteList )
             inAndOutCityMappingDict[firstCity] = lastCity
@@ -608,7 +662,7 @@ class TSP( BaseProblemFunction ):
         currentCity = lastCity
         passedCitySet = set( [ firstCity, randomRoute.leftTownName, randomRoute.rightTownName ] )
 
-        while( len( blockRouteList ) < routeCount - 2 ):
+        while( len( blockRouteList ) < routeCount - 1 ):
 
             validRouteList = []
 
@@ -625,8 +679,7 @@ class TSP( BaseProblemFunction ):
 
                     #   Collect all valid route
                     validRouteList.append( route )
-                    break
-
+                    
             #   Generate next route
             randomNextRoute = TSP.getRandomRouteList( validRouteList )
             blockRouteList.append( randomNextRoute )
@@ -642,20 +695,28 @@ class TSP( BaseProblemFunction ):
                 currentCity = inAndOutCityMappingDict[ randomNextRoute.leftTownName ]
 
             lastCity = currentCity
+
+        if( routeCount > 1 ):
+            for route in routeBetweenBlockList:
+                 routeCitySet = set( [route.rightTownName, route.leftTownName] )
+                 if( routeCitySet == set( [firstCity, lastCity] ) ):
+                     blockRouteList.append( route )
         
-        for route in routeBetweenBlockList:
-             routeCitySet = set( [route.rightTownName, route.leftTownName] )
-             if( routeCitySet == set( [firstCity, lastCity] ) ):
-                 blockRouteList.append( route )
         selectedRouteList.extend( blockRouteList )
-
+            
         return selectedRouteList
-
 
     def generateCandidate( vectorTupleList, maxNumBitInBlock, indexToPropCacheDictList ):
         routeProbVectorList = vectorTupleList[0]
-        firstRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
-        secondRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+
+        while( True ):
+
+            try:
+                firstRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+                secondRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+                break
+            except KeyError:
+                ynxlog( 0, ' KeyError, cannot gen route' )
         ynxlog( 1, 'firstRouteList = {}'.format( firstRouteList ) )
         ynxlog( 1, 'secondRouteList = {}'.format( secondRouteList ) )
         return SolutionForTSP(firstRouteList), SolutionForTSP(secondRouteList)
@@ -664,42 +725,141 @@ class TSP( BaseProblemFunction ):
         ''' Create list of block [ ( routeCount, [ routeObject, routeObject,... ]),
                                    ( routeCount, [ routeObject, routeObject,... ]), ... ]
         '''
-        numCity = 6
+        numCity = 13
         numBlock = 2
         numCityInBlock = numCity / numBlock
         numRoute = ( numCity - 1 ) / 2 * ( numCity )
         baseProb = 1 / numRoute
-        vectorList = [ ( 2, [ Route( index=0, leftTownName='1', rightTownName='2', prob=baseProb, distance=2 ),
-                             Route( index=1, leftTownName='1', rightTownName='3', prob=baseProb, distance=1 ),
-                             Route( index=2, leftTownName='2', rightTownName='3', prob=baseProb, distance=3 ) ] ),
-                      ( 2, [ Route( index=3, leftTownName='4', rightTownName='5', prob=baseProb, distance=3 ),
-                             Route( index=4, leftTownName='4', rightTownName='6', prob=baseProb, distance=2 ),
-                             Route( index=5, leftTownName='5', rightTownName='6', prob=baseProb, distance=1 ) ] ),
-                      ( 2, [ Route( index=6, leftTownName='1', rightTownName='4', prob=baseProb, distance=3 ),
-                             Route( index=7, leftTownName='1', rightTownName='5', prob=baseProb, distance=3 ),
-                             Route( index=8, leftTownName='1', rightTownName='6', prob=baseProb, distance=4 ),
-                             Route( index=9, leftTownName='2', rightTownName='4', prob=baseProb, distance=4 ),
-                             Route( index=10, leftTownName='2', rightTownName='5', prob=baseProb, distance=4 ),
-                             Route( index=11, leftTownName='2', rightTownName='6', prob=baseProb, distance=4 ),
-                             Route( index=12, leftTownName='3', rightTownName='4', prob=baseProb, distance=3 ),
-                             Route( index=13, leftTownName='3', rightTownName='5', prob=baseProb, distance=3 ),
-                             Route( index=14, leftTownName='3', rightTownName='6', prob=baseProb, distance=3 ) ] ) ]
 
-        #vectorList = [ ( 5, [ Route( index=0, leftTownName='1', rightTownName='2', prob=baseProb, distance=2 ),                             
-        #                     Route( index=2, leftTownName='2', rightTownName='3', prob=baseProb, distance=3 ),
-        #                     Route( index=3, leftTownName='4', rightTownName='5', prob=baseProb, distance=3 ),
-        #                     Route( index=4, leftTownName='4', rightTownName='6', prob=baseProb, distance=2 ),
-        #                     Route( index=5, leftTownName='5', rightTownName='6', prob=baseProb, distance=1 ),
-        #                     Route( index=6, leftTownName='1', rightTownName='4', prob=baseProb, distance=3 ),
-        #                     Route( index=7, leftTownName='1', rightTownName='5', prob=baseProb, distance=3 ),
-        #                     Route( index=8, leftTownName='1', rightTownName='6', prob=baseProb, distance=4 ),
-        #                     Route( index=9, leftTownName='2', rightTownName='4', prob=baseProb, distance=4 ),
-        #                     Route( index=10, leftTownName='2', rightTownName='5', prob=baseProb, distance=4 ),
-        #                     Route( index=11, leftTownName='2', rightTownName='6', prob=baseProb, distance=4 ),
-        #                     Route( index=12, leftTownName='3', rightTownName='4', prob=baseProb, distance=3 ),
-        #                     Route( index=13, leftTownName='3', rightTownName='5', prob=baseProb, distance=3 ),
-        #                     Route( index=14, leftTownName='3', rightTownName='6', prob=baseProb, distance=3 ) ] ),
-        #              ( 1, [ Route( index=1, leftTownName='1', rightTownName='3', prob=baseProb, distance=1 ) ] ) ]
+        cityNameList = [ 'New York', 'Los Angeles', 'Chicago', 'Minneapolis', 'Denver',
+                         'Dallas', 'Seattle', 'Boston', 'San Francisco', 'St. Louis', 'Houston',
+                         'Phoenix', 'Salt Lake City' ]
+        block1CityName = [ 'New York', 'Boston', 'Chicago', 'Minneapolis' ]
+        block2CityName = [ 'Denver', 'Salt Lake City', 'Seattle', 'San Francisco', 'Los Angeles' ]
+        block3CityName = [ 'Phoenix', 'Houston', 'Dallas', 'St. Louis' ]
+        distanceList = [
+                    [   0, 2451,  713, 1018, 1631, 1374, 2408,  213, 2571,  875, 1420, 2145, 1972], # New York
+                    [2451,    0, 1745, 1524,  831, 1240,  959, 2596,  403, 1589, 1374,  357,  579], # Los Angeles
+                    [ 713, 1745,    0,  355,  920,  803, 1737,  851, 1858,  262,  940, 1453, 1260], # Chicago
+                    [1018, 1524,  355,    0,  700,  862, 1395, 1123, 1584,  466, 1056, 1280,  987], # Minneapolis
+                    [1631,  831,  920,  700,    0,  663, 1021, 1769,  949,  796,  879,  586,  371], # Denver
+                    [1374, 1240,  803,  862,  663,    0, 1681, 1551, 1765,  547,  225,  887,  999], # Dallas
+                    [2408,  959, 1737, 1395, 1021, 1681,    0, 2493,  678, 1724, 1891, 1114,  701], # Seattle
+                    [ 213, 2596,  851, 1123, 1769, 1551, 2493,    0, 2699, 1038, 1605, 2300, 2099], # Boston
+                    [2571,  403, 1858, 1584,  949, 1765,  678, 2699,    0, 1744, 1645,  653,  600], # San Francisco
+                    [ 875, 1589,  262,  466,  796,  547, 1724, 1038, 1744,    0,  679, 1272, 1162], # St. Louis
+                    [1420, 1374,  940, 1056,  879,  225, 1891, 1605, 1645,  679,    0, 1017, 1200], # Houston
+                    [2145,  357, 1453, 1280,  586,  887, 1114, 2300,  653, 1272, 1017,    0,  504], # Phoenix
+                    [1972,  579, 1260,  987,  371,  999,  701, 2099,  600, 1162,  1200,  504,   0]] # Salt Lake City
+
+        allCityRouteList = []
+        index = 0
+        for i in range( len( cityNameList ) - 1 ):
+            leftCityName = cityNameList[i]
+            
+            for j in range( i + 1, len( cityNameList ) ):
+                rightCityName = cityNameList[j]
+                distance = distanceList[i][j]
+                route = Route( index, leftCityName, rightCityName, baseProb, distance )
+                allCityRouteList.append( route )
+
+        allRouteSet = set( allCityRouteList )
+        firstBlockRouteList = []
+        secondBlockRouteList = []
+        thirdBlockRouteList = []
+        for allRoute in allRouteSet:
+            if( allRoute.leftTownName in block1CityName
+                and allRoute.rightTownName in block1CityName ):
+                firstBlockRouteList.append( allRoute )
+
+        allRouteSet = allRouteSet.difference( set(firstBlockRouteList) )
+        
+        for allRoute in allRouteSet:
+            if( allRoute.leftTownName in block2CityName
+                and allRoute.rightTownName in block2CityName ):
+                secondBlockRouteList.append( allRoute )
+
+        allRouteSet = allRouteSet.difference( set(secondBlockRouteList) )
+        
+        for allRoute in allRouteSet:
+            if( allRoute.leftTownName in block3CityName
+                and allRoute.rightTownName in block3CityName ):
+                thirdBlockRouteList.append( allRoute )
+
+        allRouteSet = allRouteSet.difference( set(thirdBlockRouteList) )
+                
+        ynxlog( 0, ' length = {}'.format( len(allCityRouteList) ) )
+##        vectorList = [ ( len( cityNameList ) - 1, allCityRouteList ),
+##                       ( 1, allCityRouteList ) ]
+        vectorList = [ ( 3, firstBlockRouteList ),
+                       ( 4, secondBlockRouteList ),
+                       ( 3, thirdBlockRouteList ),
+                       ( 3, list( allRouteSet ) ) ]
+        
+        ynxlog( 0, ' vectorList = {}'.format( vectorList ) )
+##        vectorList = [ ( 2, [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
+##                             Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
+##                             Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ) ] ),
+##                      ( 2, [ Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
+##                             Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ) ] ),
+##                      ( 2, [ Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
+##                             Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
+##                             Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
+##                             Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
+##                             Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=5 ),
+##                             Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=4 ),
+##                             Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=4 ) ] ) ]
+
+##        vectorList = [ ( 5, [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
+##                             Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
+##                             Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ),
+##                             Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
+##                             Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ),
+##                             Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
+##                             Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
+##                             Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
+##                             Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
+##                             Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=5 ),
+##                             Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=4 ),
+##                             Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=4 ) ] ),
+##                        ( 1, [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
+##                             Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
+##                             Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ),
+##                             Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
+##                             Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ),
+##                             Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
+##                             Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
+##                             Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
+##                             Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
+##                             Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=5 ),
+##                             Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=4 ),
+##                             Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
+##                             Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=4 ) ] )
+##                       ]
+        
+        #vectorList = [ ( 5, [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),                             
+        #                     Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ),
+        #                     Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
+        #                     Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
+        #                     Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ),
+        #                     Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
+        #                     Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
+        #                     Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
+        #                     Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
+        #                     Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
+        #                     Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=4 ),
+        #                     Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=3 ),
+        #                     Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
+        #                     Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=3 ) ] ),
+        #              ( 1, [ Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ) ] ) ]
 
         return vectorList
 

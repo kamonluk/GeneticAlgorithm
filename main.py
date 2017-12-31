@@ -1,7 +1,7 @@
 #
 #   Standard import
 #
-
+import sys
 import shelve
 import math
 #   Bokeh plot graph
@@ -43,13 +43,14 @@ if __name__ == '__main__':
     numBit = 8
     maxNumBitInBlock = 8
     numSample = 1
-    populationSize = 10
+    populationSize = 20000
     generations = 1000000
     numGene = 1
     
     #   Call write candidate to shelve
     writeCandidateShelve( maxNumBitInBlock, ProblemFunction.TSP )
-    
+    #sys.exit( 0 )
+
     #   List for collect fucntion evaluation count
     #       ( list of integer )
     functEvalList = []
@@ -68,5 +69,5 @@ if __name__ == '__main__':
         fucntionEvaluationCount = CompactGA.run( **argumentDict )
         functEvalList.append( fucntionEvaluationCount )
     
-    #print( ' AVERAGE = ', np.average( functEvalList ) )
-    ynxlog( 1, functEvalList )
+    ynxlog( 0, ' AVERAGE = {}'.format( np.average( functEvalList ) ) )
+    ynxlog( 0, functEvalList )
