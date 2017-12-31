@@ -280,7 +280,7 @@ def run( generations, size, populationSize,
         #   Stop if fitness is the best 
         #if( best.fitness == size ):
         #if( best.fitness == ( log2( size ) + 1 ) * size ):
-        if( best.fitness == 13 ):
+        if( best.fitness == 7293 ):
         #if( best.fitness == ( ( log2( maxNumBitInBlock ) + 1 ) * maxNumBitInBlock ) * numBlock ):
             break
 
