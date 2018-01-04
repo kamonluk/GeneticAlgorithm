@@ -7,7 +7,7 @@ import shelve
 
 from collections import OrderedDict
 
-from math import floor, pow, isnan, log2
+from math import floor, pow, isnan, log2, isinf
 
 #
 #   Local import
@@ -236,7 +236,7 @@ def run( generations, size, populationSize,
 
         endCompeteTime = time.time()
 
-        ynxlog( 2, ' winner = {}, loser = {}'.format( winner.value, loser.value ) )
+        ynxlog( 0, ' winner = {}, loser = {}'.format( winner, loser ) )
         ynxlog( 0, ' winner fitness = {}, loser fitness = {}'.format( winner.fitness, loser.fitness ) )
         
         #   Update best candidate
@@ -245,6 +245,8 @@ def run( generations, size, populationSize,
         else:
             best = winner
 
+        ynxlog( 3, '    problemFunctionClass.compete    ' )
+        
         #
         #   Update probability vector
         #
@@ -256,6 +258,8 @@ def run( generations, size, populationSize,
         
         endUpVecTime = time.time()
 
+        ynxlog( 3, '    problemFunctionClass.updateVector    ' )
+        
         #
         #   Check result and print information
         #
@@ -263,15 +267,15 @@ def run( generations, size, populationSize,
         endAllTime = endUpVecTime
         sumTime += ( endAllTime - startAllTime )
         
-        if( bestfitgen == -1 and winner.fitness == size ):
-            bestfitgen = generationIndex + 1
+##        if( bestfitgen == -1 and winner.fitness == size ):
+##            bestfitgen = generationIndex + 1
 
         ynxlog( 1, '    gen candidate time = {}'.format( endGenCanTime - startGenCanTime ) )
         ynxlog( 1, '    cal fitness time = {}'.format( endCalFitTime - startCalFitTime ) )
         ynxlog( 1, '    compete time = {}'.format( endCompeteTime - startCompeteTime ) )
         ynxlog( 1, '    update vec time = {}'.format( endUpVecTime - startUpVecTime ) )
         ynxlog( 1, '    generation time = {}'.format( endAllTime - startAllTime ) )        
-        ynxlog( 0, " sample: %d generation: %d best value: %s best fitness: %f" % ( sample + 1, generationIndex + 1, best, float(best.fitness)))
+        ynxlog( 0, ' sample: {} generation: {} best value: {} best fitness: {}'.format( sample + 1, generationIndex + 1, best, best.fitness))
         ynxlog( 0, '    avg bin time = {}'.format( sumTime / ( generationIndex + 1 ) ) )
         ynxlog( 0, ' {} '.format( '='*50 ) )
         
@@ -280,10 +284,11 @@ def run( generations, size, populationSize,
         #   Stop if fitness is the best 
         #if( best.fitness == size ):
         #if( best.fitness == ( log2( size ) + 1 ) * size ):
-        if( best.fitness == 7293 ):
+        #if( best.fitness == 7293 ):
+        if( best.fitness == 13 ):
         #if( best.fitness == ( ( log2( maxNumBitInBlock ) + 1 ) * maxNumBitInBlock ) * numBlock ):
             break
-
+        
     #   Write result to shelve
     functEvalValue = getEvaluateFunctionCount()
 ##    shelveObj['EvaluateFunctionCount'] = functEvalValue

@@ -43,12 +43,15 @@ if __name__ == '__main__':
     numBit = 8
     maxNumBitInBlock = 8
     numSample = 1
-    populationSize = 20000
+    populationSize = 100
     generations = 1000000
     numGene = 1
+
+    #   Choose problem HERE
+    problemClass = ProblemFunction.TSPOneMax
     
     #   Call write candidate to shelve
-    writeCandidateShelve( maxNumBitInBlock, ProblemFunction.TSP )
+    writeCandidateShelve( maxNumBitInBlock, problemClass )
     #sys.exit( 0 )
 
     #   List for collect fucntion evaluation count
@@ -61,7 +64,7 @@ if __name__ == '__main__':
         argumentDict = { 'generations' : generations,
                          'size' : numBit,
                          'populationSize' : populationSize,
-                         'problemFunctionClass' : ProblemFunction.TSP,
+                         'problemFunctionClass' : problemClass,
                          'numGene' : numGene,
                          'maxNumBitInBlock' : maxNumBitInBlock,
                          'sample' : sample }

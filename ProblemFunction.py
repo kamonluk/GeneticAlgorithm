@@ -4,6 +4,7 @@
 
 from random import random
 import time
+import math
 #
 #   Local import
 #
@@ -11,6 +12,12 @@ import time
 
 from YnxLog import ynxlog
 from Globals import increaseEvaluateFunctionCount
+
+#
+#   Function bodies
+#
+
+INFINITY = float( 'inf' )
 
 #
 #   Function bodies
@@ -443,6 +450,38 @@ class Trap( BaseProblemFunction ):
 #   TSP ( traversal salesman problem )
 #      
 
+def getFirstLoopList( routeList ):
+
+    if( len( routeList ) == 0 ):
+        return []
+
+    firstLoopRouteList = []
+    remainCitySet = set(routeList[0:])
+
+    currentCity = routeList[0].rightTownName
+    firstCity = routeList[0].leftTownName
+
+    while( currentCity != firstCity ):
+
+        for route in routeList:
+
+            if( route.leftTownName == currentCity ):
+                currentCity = route.rightTownName                
+                firstLoopRouteList.append( route )
+                break
+                
+            elif( route.rightTownName == currentCity ):
+                currentCity = route.leftTownName                
+                firstLoopRouteList.append( route )
+                break
+        
+    return firstLoopRouteList
+    
+def isValidLoopRoute( routeList, numCity ):
+    ''' Check all route is one loop
+    '''
+    return len( getFirstLoopList( routeList ) ) == numCity
+
 class SolutionForTSP( object ):
     ''' A solution for the given problem, it is composed of a binary value and its fitness value
     '''
@@ -455,12 +494,12 @@ class SolutionForTSP( object ):
         
     def calculateFitness(self, fitnessFunction):
         self.fitness = fitnessFunction(self.value)
-
+        
     def __repr__( self ):
         
         if( len( self.value ) == 0 ):
             return ' empty list '
-        
+
         routeStrList = []
         remainCitySet = set(self.value[0:])
 
@@ -496,13 +535,12 @@ class Route():
         self.prob = prob
     
     def __repr__( self ):
-        return ' ( {} <--> {} ) '.format( self.leftTownName, self.rightTownName )
+        return ' ( {} <--> {} ) {} '.format( self.leftTownName, self.rightTownName, self.prob )
 
 class TSP( BaseProblemFunction ):
 
-    #   Input mapping score
-    ScoreList = [1] * 16
-
+    NumCity = 13
+    
     @increaseEvaluateFunctionCountDecorator
     def computeFitness( routeList ):
         ''' %routeList% is list of route
@@ -728,7 +766,7 @@ class TSP( BaseProblemFunction ):
         ''' Create list of block [ ( routeCount, [ routeObject, routeObject,... ]),
                                    ( routeCount, [ routeObject, routeObject,... ]), ... ]
         '''
-        numCity = 13
+        numCity = TSP.NumCity
         numBlock = 2
         numCityInBlock = numCity / numBlock
         numRoute = ( numCity - 1 ) / 2 * ( numCity )
@@ -903,4 +941,191 @@ class TSP( BaseProblemFunction ):
             allRouteList.extend( routeList )
         #ynxlog( 0, ' allRouteList = {}'.format( allRouteList ) )
         #ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
+
+########################################
+#   TSP One max ( traversal salesman problem )
+#      
+
+class SolutionForTSPOneMax( SolutionForTSP ):
+    ''' A solution for the given problem, it is composed of a binary value and its fitness value
+    '''
+    def __init__(self, value):
+        SolutionForTSP.__init__( self, value )
+
+    def __repr__( self ):
+
+        numRoute = int( ( TSPOneMax.NumCity - 1 ) / 2 * ( TSPOneMax.NumCity ) )
+        bitStrList = ['0'] * numRoute
+        for route in self.value:
+            bitStrList[route.index] = '1'
+
+        reprStr = ''.join( bitStrList )
+
+        if( not math.isinf( self.fitness ) ):
+            reprStr += ' route = '
+            reprStr += SolutionForTSP.__repr__( self )
+        return reprStr
+        
+class TSPOneMax( BaseProblemFunction ):
+
+    NumCity = 6
+    
+    @increaseEvaluateFunctionCountDecorator
+    def computeFitness( routeList ):
+        ''' %routeList% is list of route
+            return value compute from trap problem
+        '''
+
+        #   For onemax, if route count was equal to num city ( invalid route selection )
+        #       make fitness to INFINITY
+        if( len( routeList ) != TSPOneMax.NumCity ):
+            return INFINITY
+
+        cityNameToCountDict = {}
+        
+        for route in routeList:
+
+            if( route.leftTownName not in cityNameToCountDict ):
+                cityNameToCountDict[ route.leftTownName ] = 1
+            else:
+                cityNameToCountDict[ route.leftTownName ] += 1
+                
+            if( route.rightTownName not in cityNameToCountDict ):
+                cityNameToCountDict[ route.rightTownName ] = 1
+            else:
+                cityNameToCountDict[ route.rightTownName ] += 1
+                
+        #   For onemaax if route value make a loop ( invalid route selection )
+        #       make fitness to INFINITY
+        for routeCount in cityNameToCountDict.values():
+            if( routeCount != 2 ):
+                return INFINITY
+
+        #   Check valid loop
+        if( not isValidLoopRoute( routeList, TSPOneMax.NumCity ) ):
+            return INFINITY
+            
+        #   Sum distance for route
+        fitness = 0
+        for route in routeList:
+            fitness += route.distance
+        return fitness
+
+    def compete( firstCandidate, secondCandidate):
+        ''' Returns a tuple with the winner solution
+        '''
+        if firstCandidate.fitness < secondCandidate.fitness:
+            return firstCandidate, secondCandidate
+        else:
+            return secondCandidate, firstCandidate
+
+    def generateCandidate( vectorTupleList, maxNumBitInBlock, indexToPropCacheDictList ):
+        
+        routeProbVectorList = vectorTupleList[0]
+        firstRouteList = []
+        secondRouteList = []
+        for routeProbVector in routeProbVectorList:
+            randomValue1 = random()
+            randomValue2 = random()
+            if( randomValue1 < routeProbVector.prob ):
+                firstRouteList.append( routeProbVector )
+            if( randomValue2 < routeProbVector.prob ):
+                secondRouteList.append( routeProbVector )
+        return SolutionForTSPOneMax(firstRouteList), SolutionForTSPOneMax(secondRouteList)
+
+    def generateVector( numBit ):
+        ''' Create list of block [ ( routeCount, [ routeObject, routeObject,... ]),
+                                   ( routeCount, [ routeObject, routeObject,... ]), ... ]
+        '''
+        numCity = TSPOneMax.NumCity
+        numBlock = 2
+        numCityInBlock = numCity / numBlock
+        numRoute = ( numCity - 1 ) / 2 * ( numCity )
+        baseProb = 0.5
+
+        cityNameList = [ 'New York', 'Los Angeles', 'Chicago', 'Minneapolis', 'Denver',
+                         'Dallas', 'Seattle', 'Boston', 'San Francisco', 'St. Louis', 'Houston',
+                         'Phoenix', 'Salt Lake City' ]
+        block1CityName = [ 'New York', 'Boston', 'Chicago', 'Minneapolis' ]
+        block2CityName = [ 'Denver', 'Salt Lake City', 'Seattle', 'San Francisco', 'Los Angeles' ]
+        block3CityName = [ 'Phoenix', 'Houston', 'Dallas', 'St. Louis' ]
+        distanceList = [
+                    [   0, 2451,  713, 1018, 1631, 1374, 2408,  213, 2571,  875, 1420, 2145, 1972], # New York
+                    [2451,    0, 1745, 1524,  831, 1240,  959, 2596,  403, 1589, 1374,  357,  579], # Los Angeles
+                    [ 713, 1745,    0,  355,  920,  803, 1737,  851, 1858,  262,  940, 1453, 1260], # Chicago
+                    [1018, 1524,  355,    0,  700,  862, 1395, 1123, 1584,  466, 1056, 1280,  987], # Minneapolis
+                    [1631,  831,  920,  700,    0,  663, 1021, 1769,  949,  796,  879,  586,  371], # Denver
+                    [1374, 1240,  803,  862,  663,    0, 1681, 1551, 1765,  547,  225,  887,  999], # Dallas
+                    [2408,  959, 1737, 1395, 1021, 1681,    0, 2493,  678, 1724, 1891, 1114,  701], # Seattle
+                    [ 213, 2596,  851, 1123, 1769, 1551, 2493,    0, 2699, 1038, 1605, 2300, 2099], # Boston
+                    [2571,  403, 1858, 1584,  949, 1765,  678, 2699,    0, 1744, 1645,  653,  600], # San Francisco
+                    [ 875, 1589,  262,  466,  796,  547, 1724, 1038, 1744,    0,  679, 1272, 1162], # St. Louis
+                    [1420, 1374,  940, 1056,  879,  225, 1891, 1605, 1645,  679,    0, 1017, 1200], # Houston
+                    [2145,  357, 1453, 1280,  586,  887, 1114, 2300,  653, 1272, 1017,    0,  504], # Phoenix
+                    [1972,  579, 1260,  987,  371,  999,  701, 2099,  600, 1162,  1200,  504,   0]] # Salt Lake City
+
+        allCityRouteList = []
+        index = 0
+        for i in range( len( cityNameList ) - 1 ):
+            leftCityName = cityNameList[i]
+            
+            for j in range( i + 1, len( cityNameList ) ):
+                rightCityName = cityNameList[j]
+                distance = distanceList[i][j]
+                route = Route( index, leftCityName, rightCityName, baseProb, distance )
+                allCityRouteList.append( route )
+
+        vectorList = allCityRouteList
+        
+        ynxlog( 3, ' vectorList = {}'.format( vectorList ) )
+
+        vectorList = [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
+                     Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
+                     Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ),
+                     Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
+                     Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
+                     Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ),
+                     Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
+                     Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
+                     Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
+                     Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
+                     Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
+                     Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=5 ),
+                     Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=4 ),
+                     Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
+                     Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=4 ) ]
+        
+        return vectorList
+
+    def updateVector( vectorBlockList, winner, loser, populationSize, maxNumBitInBlock ):
+        ''' Get all winner, loser routeList by find difference index between winner solution and loser solution                
+        '''
+        winnerRouteList = winner.value
+        loserRouteList = loser.value
+
+        winnerRouteIndexList =  [ route.index for route in winnerRouteList ]
+        loserRouteIndexList =  [ route.index for route in loserRouteList ]
+
+        ynxlog( 1, ' winner route index = {} '.format( winnerRouteIndexList ) )
+        ynxlog( 1, ' loser route index = {} '.format( loserRouteIndexList ) )
+
+        #   Compute transfer prob
+        transferProb = 1.0 / float(populationSize)
+            
+        #   Loop to update prob in route
+        for winnerRoute in winnerRouteList:
+            
+            #   Update probility
+            winnerRoute.prob = min( 1.0, winnerRoute.prob + transferProb )
+
+        #   Loop to update prob in route
+        for loserRoute in loserRouteList:
+            
+            #   Update probility
+            loserRoute.prob = max( 0.0, loserRoute.prob - transferProb )
+
+        ynxlog( 0, ' allRouteList = {}'.format( vectorBlockList[0] ) )
+##        ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
+
+
 
