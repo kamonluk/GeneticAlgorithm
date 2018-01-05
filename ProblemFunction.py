@@ -450,37 +450,45 @@ class Trap( BaseProblemFunction ):
 #   TSP ( traversal salesman problem )
 #      
 
-def getFirstLoopList( routeList ):
-
-    if( len( routeList ) == 0 ):
-        return []
-
-    firstLoopRouteList = []
-    remainCitySet = set(routeList[0:])
-
-    currentCity = routeList[0].rightTownName
-    firstCity = routeList[0].leftTownName
-
-    while( currentCity != firstCity ):
-
-        for route in routeList:
-
-            if( route.leftTownName == currentCity ):
-                currentCity = route.rightTownName                
-                firstLoopRouteList.append( route )
-                break
-                
-            elif( route.rightTownName == currentCity ):
-                currentCity = route.leftTownName                
-                firstLoopRouteList.append( route )
-                break
-        
-    return firstLoopRouteList
-    
-def isValidLoopRoute( routeList, numCity ):
-    ''' Check all route is one loop
-    '''
-    return len( getFirstLoopList( routeList ) ) == numCity
+##def getFirstLoopList( routeList ):
+##
+##    if( len( routeList ) == 0 ):
+##        return []
+##
+##    firstLoopRouteList = []
+##    
+##    remainCitySet = set(routeList[0:])
+##
+##    currentCity = routeList[0].rightTownName
+##    firstCity = routeList[0].leftTownName
+##
+##    firstRouteCitySet = set( [routeList[0].rightTownName, routeList[0].leftTownName] )
+##    
+##    while( currentCity != firstCity ):
+##
+##        for route in routeList:
+##
+##            routeCitySet = set( [route.rightTownName, route.leftTownName] )
+##
+##            if( firstRouteCitySet == routeCitySet ):
+##                continue
+##                
+##            if( route.leftTownName == currentCity ):
+##                currentCity = route.rightTownName                
+##                firstLoopRouteList.append( route )
+##                break
+##                
+##            elif( route.rightTownName == currentCity ):
+##                currentCity = route.leftTownName                
+##                firstLoopRouteList.append( route )
+##                break
+##        
+##    return firstLoopRouteList
+##    
+##def isValidLoopRoute( routeList, numCity ):
+##    ''' Check all route is one loop
+##    '''
+##    return len( getFirstLoopList( routeList ) ) == numCity
 
 class SolutionForTSP( object ):
     ''' A solution for the given problem, it is composed of a binary value and its fitness value
@@ -963,7 +971,7 @@ class SolutionForTSPOneMax( SolutionForTSP ):
 
         if( not math.isinf( self.fitness ) ):
             reprStr += ' route = '
-            reprStr += SolutionForTSP.__repr__( self )
+            reprStr += '{}'.format( self.value )
         return reprStr
         
 class TSPOneMax( BaseProblemFunction ):
@@ -1001,9 +1009,9 @@ class TSPOneMax( BaseProblemFunction ):
             if( routeCount != 2 ):
                 return INFINITY
 
-        #   Check valid loop
-        if( not isValidLoopRoute( routeList, TSPOneMax.NumCity ) ):
-            return INFINITY
+##        #   Check valid loop
+##        if( not isValidLoopRoute( routeList, TSPOneMax.NumCity ) ):
+##            return INFINITY
             
         #   Sum distance for route
         fitness = 0
