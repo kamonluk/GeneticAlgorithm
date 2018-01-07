@@ -29,7 +29,7 @@ def writeCandidateShelve( numBit, problemFunctionClass ):
         For optimize generate candidate
     '''
     vector = problemFunctionClass.generateVector( numBit )
-    shelveObj = shelve.open( '{}BitCandidate.shelve'.format( numBit ) )
+    shelveObj = shelve.open( 'data/{}BitCandidate_{}.shelve'.format( numBit, problemFunctionClass.Name ) )    
     shelveObj['vector'] = vector
     shelveObj.close()
 
@@ -42,35 +42,41 @@ if __name__ == '__main__':
     #   Initialize value
     numBit = 8
     maxNumBitInBlock = 8
-    numSample = 1
-    populationSize = 100
-    generations = 1000000
+    numSample = 5
+    populationSize = 10
+    populationSizeList = [10,100,500,1000,2000,5000,10000,12000,15000,20000]#range( 500, 501, 10 )
+    #populationSizeList = [4]
+    generations = 10000
     numGene = 1
-
+    doInfGen = False
+    
     #   Choose problem HERE
     problemClass = ProblemFunction.TSPOneMax
     
     #   Call write candidate to shelve
     writeCandidateShelve( maxNumBitInBlock, problemClass )
-    #sys.exit( 0 )
 
     #   List for collect fucntion evaluation count
     #       ( list of integer )
     functEvalList = []
-    
-    #   Loop to generate result for each sample
-    for sample in range( numSample ):
 
-        argumentDict = { 'generations' : generations,
-                         'size' : numBit,
-                         'populationSize' : populationSize,
-                         'problemFunctionClass' : problemClass,
-                         'numGene' : numGene,
-                         'maxNumBitInBlock' : maxNumBitInBlock,
-                         'sample' : sample }
+    #   Loop for every pop size sample
+    for populationSize in populationSizeList:
         
-        fucntionEvaluationCount = CompactGA.run( **argumentDict )
-        functEvalList.append( fucntionEvaluationCount )
+        #   Loop to generate result for each sample
+        for sample in range( numSample ):
+
+            argumentDict = { 'generations' : generations,
+                             'size' : numBit,
+                             'populationSize' : populationSize,
+                             'problemFunctionClass' : problemClass,
+                             'numGene' : numGene,
+                             'maxNumBitInBlock' : maxNumBitInBlock,
+                             'sample' : sample,
+                             'doInfGen' : doInfGen }
+            
+            fucntionEvaluationCount = CompactGA.run( **argumentDict )
+            functEvalList.append( fucntionEvaluationCount )
     
     ynxlog( 0, ' AVERAGE = {}'.format( np.average( functEvalList ) ) )
     ynxlog( 0, functEvalList )

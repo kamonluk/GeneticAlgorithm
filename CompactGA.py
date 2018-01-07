@@ -148,7 +148,7 @@ def generate_vector(size, numGene):
 
 def run( generations, size, populationSize,
          problemFunctionClass, numGene,
-         maxNumBitInBlock, sample):
+         maxNumBitInBlock, sample, doInfGen):
     ''' Run this compact GA 
     '''
 
@@ -165,7 +165,7 @@ def run( generations, size, populationSize,
     startTime = time.time()
 
     #   Open shelve to load vector
-    shelveObj = shelve.open( '{}BitCandidate.shelve'.format( maxNumBitInBlock ) )    
+    shelveObj = shelve.open( 'data/{}BitCandidate_{}.shelve'.format( maxNumBitInBlock, problemFunctionClass.Name ) )    
     initializeBitVector = shelveObj['vector']
     shelveObj.close()
     
@@ -186,20 +186,22 @@ def run( generations, size, populationSize,
     #   
     
     #   Open shelve to write result
-#    shelveObj = shelve.open( '{}bit_{}pop_backup_sample{}.shelve'.format( size, populationSize, sample ) )
+    shelveObj = shelve.open( 'data/{}bit_{}pop_backup_sample{}_Problem{}.shelve'.format( size, populationSize, sample, problemFunctionClass.Name ) )
 
     #   Initialize variable
     sumTime = 0
     generationIndex = 0
     bestfitgen = -1
     best = None
+    getSameCandidateCount = 0
+    lastGenCandidate = None    
     indexToPropCacheDictList = []
-    
-#warning Change to use this for loop until given generation number
-    #for generationIndex in range(generations):    
-    while ( True ):
-    #for generationIndex in range(1):   
-        
+
+    if( doInfGen == True ):
+        generations = -1
+
+    while ( generationIndex != generations ):
+
         startAllTime = time.time()
 
         #
@@ -238,7 +240,17 @@ def run( generations, size, populationSize,
 
         ynxlog( 0, ' winner = {}, loser = {}'.format( winner, loser ) )
         ynxlog( 0, ' winner fitness = {}, loser fitness = {}'.format( winner.fitness, loser.fitness ) )
-        
+
+        if( lastGenCandidate == None ):
+            lastGenCandidate = winner
+
+        if( winner.getRouteIndexSet() == loser.getRouteIndexSet()
+            and lastGenCandidate.getRouteIndexSet() ):
+            getSameCandidateCount += 1
+            lastGenCandidate = winner
+        else:
+            getSameCandidateCount = 0
+            
         #   Update best candidate
         if best:
             best, winner = problemFunctionClass.compete( winner, best )            
@@ -275,7 +287,10 @@ def run( generations, size, populationSize,
         ynxlog( 1, '    compete time = {}'.format( endCompeteTime - startCompeteTime ) )
         ynxlog( 1, '    update vec time = {}'.format( endUpVecTime - startUpVecTime ) )
         ynxlog( 1, '    generation time = {}'.format( endAllTime - startAllTime ) )        
-        ynxlog( 0, ' sample: {} generation: {} best value: {} best fitness: {}'.format( sample + 1, generationIndex + 1, best, best.fitness))
+        ynxlog( 0, ' sample: {} generation: {} population size: {} \nbest value: {} \nbest fitness: {}'.format( sample + 1,
+                                                                                                                generationIndex + 1,
+                                                                                                                populationSize,
+                                                                                                                best, best.fitness))
         ynxlog( 0, '    avg bin time = {}'.format( sumTime / ( generationIndex + 1 ) ) )
         ynxlog( 0, ' {} '.format( '='*50 ) )
         
@@ -284,21 +299,42 @@ def run( generations, size, populationSize,
         #   Stop if fitness is the best 
         #if( best.fitness == size ):
         #if( best.fitness == ( log2( size ) + 1 ) * size ):
-        #if( best.fitness == 7293 ):
-        if( best.fitness == 13 ):
+        if( best.fitness == 7293 ):
+        #if( best.fitness == 13 ):
         #if( best.fitness == ( ( log2( maxNumBitInBlock ) + 1 ) * maxNumBitInBlock ) * numBlock ):
             break
+
+        if( getSameCandidateCount >= 100 ):
+            break
+        
+##        isExit = False
+##        for routeVector in vectorBlock:
+##            for routeCount, routeList in routeVector:
+##                for route in routeList:
+##                    if( route.prob == 0
+##                        or route.prob == 1 ):
+##                        isExit = True
+##                        break
+##                
+##        if( isExit ):
+##            break
         
     #   Write result to shelve
     functEvalValue = getEvaluateFunctionCount()
-##    shelveObj['EvaluateFunctionCount'] = functEvalValue
-##    shelveObj['generation'] = generationIndex
-##    shelveObj['vectorBlock'] = vectorBlock
-##    shelveObj['bestValue'] = best.value
-##    shelveObj.close()
+    correctBitCount = problemFunctionClass.getCorrectBitCount( best )
+    
+    shelveObj['EvaluateFunctionCount'] = functEvalValue
+    shelveObj['generation'] = generationIndex
+    shelveObj['vectorBlock'] = vectorBlock
+    shelveObj['bestValue'] = '{}'.format( best )
+    shelveObj['bestFitness'] = '{}'.format( best.fitness )
+    shelveObj['correctBitCount'] = correctBitCount
+    shelveObj.close()
 
     ynxlog( 1, 'best fitness found in gen = {} '.format( bestfitgen ) )
     ynxlog( 0, ' EvaluateFunctionCount = {}'.format( functEvalValue ) )
+    ynxlog( 0, ' best value = {}'.format( best ) )
+    ynxlog( 0, ' correctBitCount = {}'.format( correctBitCount ) )
     
     #   Reset value after end this sample
     resetEvaluateFunctionCount()

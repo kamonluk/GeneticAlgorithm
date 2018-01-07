@@ -18,6 +18,7 @@ from Globals import increaseEvaluateFunctionCount
 #
 
 INFINITY = float( 'inf' )
+NumCity = 13
 
 #
 #   Function bodies
@@ -138,6 +139,10 @@ class BaseProblemFunction( object ):
         else:
             return secondCandidate, firstCandidate
 
+    @staticmethod
+    def getCorrectBitCount( solution ):
+        raise NotImplemented( ' not implemented yet ' )
+    
 ########################################
 #   SumOfBits
 #
@@ -499,12 +504,24 @@ class SolutionForTSP( object ):
         # note value is list of Route object
         self.value = value
         self.fitness = None
-        
+
+    def getRouteIndexSet( self ):
+        return set( [ route.index for route in self.value ] )
+    
     def calculateFitness(self, fitnessFunction):
         self.fitness = fitnessFunction(self.value)
-        
+
     def __repr__( self ):
-        
+
+        numRoute = int( ( NumCity - 1 ) / 2 * ( NumCity ) )
+        bitStrList = ['0'] * numRoute
+
+        for route in self.value:
+            bitStrList[route.index] = '1'
+
+        reprStr = ' '
+        reprStr += ''.join( bitStrList )
+        reprStr += '\n'
         if( len( self.value ) == 0 ):
             return ' empty list '
 
@@ -530,8 +547,9 @@ class SolutionForTSP( object ):
                     break
             
         routeStrList = [self.value[0].rightTownName] + routeStrList
-        return ' --> '.join( routeStrList )
-        
+        reprStr += ' --> '.join( routeStrList )
+        return reprStr
+    
 class Route():
 
     def __init__( self, index, leftTownName, rightTownName, prob, distance ):
@@ -547,7 +565,9 @@ class Route():
 
 class TSP( BaseProblemFunction ):
 
-    NumCity = 13
+    Name = 'TSP'
+    
+    BestRouteIndexList = [27, 23, 6, 62, 49, 58, 18, 75, 54, 53, 21, 8, 33]
     
     @increaseEvaluateFunctionCountDecorator
     def computeFitness( routeList ):
@@ -627,11 +647,8 @@ class TSP( BaseProblemFunction ):
                 
                 validRouteList = []
 
+                isAllRouteIsZeroProb = True
                 for route in routeList:
-
-                    #   Skip route that prob is zero
-                    if( route.prob == 0 ):
-                        continue
                     
                     routeCitySet = set( [route.rightTownName, route.leftTownName] )
 
@@ -648,15 +665,27 @@ class TSP( BaseProblemFunction ):
                         and routeCitySet.difference( passedCitySet ) == routeCitySet ):
 
                         #   Collect all valid route
-                        validRouteList.append( route )                        
+                        validRouteList.append( route )
+
+                        if( route.prob != 0 ):
+                            isAllRouteIsZeroProb = False
                     
                 ynxlog( 1, 'validRoute = {} '.format( validRouteList ) )
 
+                #   If all route prob is  zero, change it to 1 / validRouteCount
+                if( isAllRouteIsZeroProb ):
+                    for validRoute in validRouteList:
+                        validRoute.prob = 1 / float( len( validRouteList ) )
+                
                 #   Generate next route
                 randomNextRoute = TSP.getRandomRouteList( validRouteList )
                 blockRouteList.append( randomNextRoute )
 
-                
+                #   Reset prob back
+                if( isAllRouteIsZeroProb ):
+                    for validRoute in validRouteList:
+                        validRoute.prob = 0
+                        
                 #   Change next city and update passed city and current city
                 if( randomNextRoute.leftTownName == firstCity ):
                     firstCity = randomNextRoute.rightTownName
@@ -687,22 +716,34 @@ class TSP( BaseProblemFunction ):
         routeCount, routeBetweenBlockList = vectorTupleList[-1]
         
         ynxlog( 1, ' routeBetweenBlockList = {} '.format( routeBetweenBlockList ) )
+
+        isAllRouteIsZeroProb = True
         
         validRouteBetweenBlockList = []
         validCitySet = set(inAndOutCityMappingDict.keys())
         for route in routeBetweenBlockList:
-
-            if( route.prob == 0 ):
-                continue
-                    
+                 
             if( route.rightTownName not in validCitySet 
                 or route.leftTownName not in validCitySet ):
                 continue
             validRouteBetweenBlockList.append( route )
-                   
+
+            if( route.prob != 0 ):
+                isAllRouteIsZeroProb = False
+
+        #   If all route prob is  zero, change it to 1 / validRouteCount
+        if( isAllRouteIsZeroProb ):
+            for validRoute in validRouteBetweenBlockList:
+                validRoute.prob = 1 / float( len( validRouteBetweenBlockList ) )
+                    
         randomRoute = TSP.getRandomRouteList( validRouteBetweenBlockList )
         blockRouteList = [randomRoute]
 
+        #   Reset prob back
+        if( isAllRouteIsZeroProb ):
+            for validRoute in validRouteBetweenBlockList:
+                validRoute.prob = 0
+                
         ynxlog( 1, ' randomRoute = {} {} '.format( randomRoute.leftTownName, randomRoute.rightTownName ) )
 
         #   Initialize for find next route
@@ -715,6 +756,8 @@ class TSP( BaseProblemFunction ):
 
             validRouteList = []
 
+            isAllRouteIsZeroProb = True
+            
             for route in validRouteBetweenBlockList:
                 routeCitySet = set( [route.rightTownName, route.leftTownName] )
 
@@ -728,11 +771,24 @@ class TSP( BaseProblemFunction ):
 
                     #   Collect all valid route
                     validRouteList.append( route )
+
+                    if( route.prob != 0 ):
+                        isAllRouteIsZeroProb = False
+
+            #   If all route prob is  zero, change it to 1 / validRouteCount
+            if( isAllRouteIsZeroProb ):
+                for validRoute in validRouteList:
+                    validRoute.prob = 1 / float( len( validRouteList ) )
                     
             #   Generate next route
             randomNextRoute = TSP.getRandomRouteList( validRouteList )
             blockRouteList.append( randomNextRoute )
 
+            #   Reset prob back
+            if( isAllRouteIsZeroProb ):
+                for validRoute in validRouteList:
+                    validRoute.prob = 0
+                    
             #   Update passed city and current city
             passedCitySet.add( randomNextRoute.rightTownName )
             passedCitySet.add( randomNextRoute.leftTownName )
@@ -758,14 +814,14 @@ class TSP( BaseProblemFunction ):
     def generateCandidate( vectorTupleList, maxNumBitInBlock, indexToPropCacheDictList ):
         routeProbVectorList = vectorTupleList[0]
 
-        while( True ):
-
-            try:
-                firstRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
-                secondRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
-                break
-            except KeyError:
-                ynxlog( 0, ' KeyError, cannot gen route' )
+##        while( True ):
+##
+##            try:
+        firstRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+        secondRouteList = TSP.getRouteListFromVectorList( routeProbVectorList )
+##                break
+##            except KeyError:
+##                ynxlog( 0, ' KeyError, cannot gen route' )
         ynxlog( 1, 'firstRouteList = {}'.format( firstRouteList ) )
         ynxlog( 1, 'secondRouteList = {}'.format( secondRouteList ) )
         return SolutionForTSP(firstRouteList), SolutionForTSP(secondRouteList)
@@ -774,7 +830,7 @@ class TSP( BaseProblemFunction ):
         ''' Create list of block [ ( routeCount, [ routeObject, routeObject,... ]),
                                    ( routeCount, [ routeObject, routeObject,... ]), ... ]
         '''
-        numCity = TSP.NumCity
+        numCity = NumCity
         numBlock = 2
         numCityInBlock = numCity / numBlock
         numRoute = ( numCity - 1 ) / 2 * ( numCity )
@@ -811,6 +867,7 @@ class TSP( BaseProblemFunction ):
                 distance = distanceList[i][j]
                 route = Route( index, leftCityName, rightCityName, baseProb, distance )
                 allCityRouteList.append( route )
+                index += 1
 
         allRouteSet = set( allCityRouteList )
         firstBlockRouteList = []
@@ -924,9 +981,7 @@ class TSP( BaseProblemFunction ):
 
         ynxlog( 1, ' winner route index = {} '.format( winnerRouteIndexList ) )
         ynxlog( 1, ' loser route index = {} '.format( loserRouteIndexList ) )
-
-        
-            
+                    
         #   Loop to update prob in route
         for index in range( len( winnerRouteList ) ):
 
@@ -950,6 +1005,23 @@ class TSP( BaseProblemFunction ):
         #ynxlog( 0, ' allRouteList = {}'.format( allRouteList ) )
         #ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
 
+    def getCorrectBitCount( solution ):
+
+        numCity = NumCity
+        numRoute = ( numCity - 1 ) / 2 * ( numCity )
+        correctBit = numRoute
+        selectIndexList = []
+        for value in solution.value:
+            selectIndexList.append( value.index )                                    
+            if( value.index not in TSPOneMax.BestRouteIndexList ):
+                correctBit -= 1
+
+        for bestRouteIndex in TSPOneMax.BestRouteIndexList:
+            if( bestRouteIndex not in selectIndexList ):
+                correctBit -= 1
+                
+        return correctBit
+    
 ########################################
 #   TSP One max ( traversal salesman problem )
 #      
@@ -962,21 +1034,23 @@ class SolutionForTSPOneMax( SolutionForTSP ):
 
     def __repr__( self ):
 
-        numRoute = int( ( TSPOneMax.NumCity - 1 ) / 2 * ( TSPOneMax.NumCity ) )
+        numRoute = int( ( NumCity - 1 ) / 2 * ( NumCity ) )
         bitStrList = ['0'] * numRoute
         for route in self.value:
             bitStrList[route.index] = '1'
 
         reprStr = ''.join( bitStrList )
 
-        if( not math.isinf( self.fitness ) ):
-            reprStr += ' route = '
-            reprStr += '{}'.format( self.value )
+##        if( not math.isinf( self.fitness ) ):
+##            reprStr += ' route = '
+##            reprStr += '{}'.format( self.value )
         return reprStr
         
 class TSPOneMax( BaseProblemFunction ):
 
-    NumCity = 6
+    Name = 'TSPOneMax'
+
+    BestRouteIndexList = [27, 23, 6, 62, 49, 58, 18, 75, 54, 53, 21, 8, 33]
     
     @increaseEvaluateFunctionCountDecorator
     def computeFitness( routeList ):
@@ -986,7 +1060,7 @@ class TSPOneMax( BaseProblemFunction ):
 
         #   For onemax, if route count was equal to num city ( invalid route selection )
         #       make fitness to INFINITY
-        if( len( routeList ) != TSPOneMax.NumCity ):
+        if( len( routeList ) != NumCity ):
             return INFINITY
 
         cityNameToCountDict = {}
@@ -1045,7 +1119,7 @@ class TSPOneMax( BaseProblemFunction ):
         ''' Create list of block [ ( routeCount, [ routeObject, routeObject,... ]),
                                    ( routeCount, [ routeObject, routeObject,... ]), ... ]
         '''
-        numCity = TSPOneMax.NumCity
+        numCity = NumCity
         numBlock = 2
         numCityInBlock = numCity / numBlock
         numRoute = ( numCity - 1 ) / 2 * ( numCity )
@@ -1082,26 +1156,27 @@ class TSPOneMax( BaseProblemFunction ):
                 distance = distanceList[i][j]
                 route = Route( index, leftCityName, rightCityName, baseProb, distance )
                 allCityRouteList.append( route )
-
+                index += 1
+                
         vectorList = allCityRouteList
         
         ynxlog( 3, ' vectorList = {}'.format( vectorList ) )
 
-        vectorList = [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
-                     Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
-                     Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ),
-                     Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
-                     Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
-                     Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ),
-                     Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
-                     Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
-                     Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
-                     Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
-                     Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
-                     Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=5 ),
-                     Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=4 ),
-                     Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
-                     Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=4 ) ]
+##        vectorList = [ Route( index=0, leftTownName='A', rightTownName='B', prob=baseProb, distance=2 ),
+##                     Route( index=1, leftTownName='A', rightTownName='C', prob=baseProb, distance=1 ),
+##                     Route( index=2, leftTownName='B', rightTownName='C', prob=baseProb, distance=3 ),
+##                     Route( index=3, leftTownName='D', rightTownName='E', prob=baseProb, distance=3 ),
+##                     Route( index=4, leftTownName='D', rightTownName='F', prob=baseProb, distance=2 ),
+##                     Route( index=5, leftTownName='E', rightTownName='F', prob=baseProb, distance=1 ),
+##                     Route( index=6, leftTownName='A', rightTownName='D', prob=baseProb, distance=3 ),
+##                     Route( index=7, leftTownName='A', rightTownName='E', prob=baseProb, distance=3 ),
+##                     Route( index=8, leftTownName='A', rightTownName='F', prob=baseProb, distance=4 ),
+##                     Route( index=9, leftTownName='B', rightTownName='D', prob=baseProb, distance=4 ),
+##                     Route( index=10, leftTownName='B', rightTownName='E', prob=baseProb, distance=4 ),
+##                     Route( index=11, leftTownName='B', rightTownName='F', prob=baseProb, distance=5 ),
+##                     Route( index=12, leftTownName='C', rightTownName='D', prob=baseProb, distance=4 ),
+##                     Route( index=13, leftTownName='C', rightTownName='E', prob=baseProb, distance=3 ),
+##                     Route( index=14, leftTownName='C', rightTownName='F', prob=baseProb, distance=4 ) ]
         
         return vectorList
 
@@ -1122,18 +1197,38 @@ class TSPOneMax( BaseProblemFunction ):
             
         #   Loop to update prob in route
         for winnerRoute in winnerRouteList:
+
+            if( winnerRoute.index in loserRouteIndexList ):
+                continue
             
             #   Update probility
             winnerRoute.prob = min( 1.0, winnerRoute.prob + transferProb )
 
         #   Loop to update prob in route
         for loserRoute in loserRouteList:
+
+            if( loserRoute.index in winnerRouteIndexList ):
+                continue
             
             #   Update probility
             loserRoute.prob = max( 0.0, loserRoute.prob - transferProb )
 
-        ynxlog( 0, ' allRouteList = {}'.format( vectorBlockList[0] ) )
+##        ynxlog( 0, ' allRouteList = {}'.format( vectorBlockList[0] ) )
 ##        ynxlog( 0, ' sum = {}'.format( sum([route.prob for route in allRouteList ]) ) )
 
+    def getCorrectBitCount( solution ):
 
+        numCity = NumCity
+        numRoute = ( numCity - 1 ) / 2 * ( numCity )
+        correctBit = numRoute
+        selectIndexList = []
+        for value in solution.value:
+            selectIndexList.append( value.index )                                    
+            if( value.index not in TSPOneMax.BestRouteIndexList ):
+                correctBit -= 1
 
+        for bestRouteIndex in TSPOneMax.BestRouteIndexList:
+            if( bestRouteIndex not in selectIndexList ):
+                correctBit -= 1
+                
+        return correctBit
